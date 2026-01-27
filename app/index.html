@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Convert files privately in your browser. No uploads, no servers - powered by WebAssembly.">
+    <meta name="theme-color" content="#0a0a0f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>File Converter | Private Browser-Based Conversion</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <a href="../index.html" class="logo">
+                <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="2" width="36" height="36" rx="8" stroke="url(#logoGrad)" stroke-width="2.5"/>
+                    <path d="M12 14h16M12 20h12M12 26h8" stroke="url(#logoGrad)" stroke-width="2.5" stroke-linecap="round"/>
+                    <circle cx="28" cy="26" r="6" fill="url(#logoGrad)"/>
+                    <path d="M26 26l2 2 3-4" stroke="#0a0a0f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <defs>
+                        <linearGradient id="logoGrad" x1="0" y1="0" x2="40" y2="40">
+                            <stop stop-color="#00d4ff"/>
+                            <stop offset="1" stop-color="#ff00aa"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <span>File Converter</span>
+            </a>
+            <div class="header-badge">
+                <span class="privacy-dot"></span>
+                100% Private - Files never leave your browser
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Drop Zone -->
+            <div class="dropzone" id="dropzone">
+                <div class="dropzone-content">
+                    <div class="dropzone-icon">
+                        <svg viewBox="0 0 64 64" fill="none">
+                            <path d="M32 8v32M20 28l12 12 12-12" stroke="url(#uploadGrad)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M8 44v8a4 4 0 004 4h40a4 4 0 004-4v-8" stroke="url(#uploadGrad)" stroke-width="4" stroke-linecap="round"/>
+                            <defs>
+                                <linearGradient id="uploadGrad" x1="8" y1="8" x2="56" y2="56">
+                                    <stop stop-color="#00d4ff"/>
+                                    <stop offset="1" stop-color="#ff00aa"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <h2>Drop files here</h2>
+                    <p>or click to browse</p>
+                    <div class="supported-formats">
+                        <span class="format-chip">Images</span>
+                        <span class="format-chip">Audio</span>
+                        <span class="format-chip">Video</span>
+                    </div>
+                </div>
+                <input type="file" id="fileInput" multiple accept="image/*,audio/*,video/*" hidden>
+            </div>
+
+            <!-- Conversion Panel -->
+            <div class="panel" id="panel" hidden>
+                <!-- File List -->
+                <div class="file-list" id="fileList"></div>
+
+                <!-- Conversion Options -->
+                <div class="options">
+                    <div class="option-group">
+                        <label for="outputFormat">Convert to:</label>
+                        <select id="outputFormat" class="select">
+                            <optgroup label="Images">
+                                <option value="png">PNG</option>
+                                <option value="jpeg">JPEG</option>
+                                <option value="webp">WebP</option>
+                                <option value="gif">GIF</option>
+                            </optgroup>
+                            <optgroup label="Audio">
+                                <option value="mp3">MP3</option>
+                                <option value="wav">WAV</option>
+                                <option value="ogg">OGG</option>
+                            </optgroup>
+                            <optgroup label="Video">
+                                <option value="mp4">MP4</option>
+                                <option value="webm">WebM</option>
+                                <option value="gif-video">GIF (from video)</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <div class="option-group" id="qualityGroup">
+                        <label for="quality">Quality:</label>
+                        <div class="quality-slider">
+                            <input type="range" id="quality" min="10" max="100" value="85">
+                            <span id="qualityValue">85%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress -->
+                <div class="progress-container" id="progressContainer" hidden>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Converting...</div>
+                </div>
+
+                <!-- Actions -->
+                <div class="actions">
+                    <button class="btn btn-secondary" id="clearBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                        Clear
+                    </button>
+                    <button class="btn btn-primary" id="convertBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                        Convert Files
+                    </button>
+                </div>
+
+                <!-- Results -->
+                <div class="results" id="results" hidden>
+                    <h3>Converted Files</h3>
+                    <div class="result-list" id="resultList"></div>
+                    <button class="btn btn-primary btn-full" id="downloadAllBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                        </svg>
+                        Download All
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Powered by WebAssembly. <a href="https://github.com/nocodeboy/file-converter" target="_blank">Open Source</a></p>
+        </footer>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay" hidden>
+            <div class="loading-spinner"></div>
+            <p id="loadingText">Loading FFmpeg...</p>
+        </div>
+    </div>
+
+    <script src="js/app.js" type="module"></script>
+</body>
+</html>

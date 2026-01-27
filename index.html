@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="File Converter - A powerful, open-source file conversion and compression tool for Windows. Convert images, audio, video, and documents with ease.">
+    <meta name="keywords" content="file converter, image converter, video converter, audio converter, document converter, compression, windows, open source, free">
+    <meta name="author" content="German Huertas">
+    <meta property="og:title" content="File Converter - Convert & Compress Files Easily">
+    <meta property="og:description" content="A powerful, open-source file conversion and compression tool for Windows">
+    <meta property="og:type" content="website">
+    <title>File Converter | Convert & Compress Any File</title>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --bg-card: #16161f;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --text-muted: #606070;
+            --accent-cyan: #00d4ff;
+            --accent-magenta: #ff00aa;
+            --accent-yellow: #ffcc00;
+            --accent-green: #00ff88;
+            --gradient-1: linear-gradient(135deg, #00d4ff 0%, #ff00aa 100%);
+            --gradient-2: linear-gradient(135deg, #ff00aa 0%, #ffcc00 100%);
+            --gradient-3: linear-gradient(135deg, #00ff88 0%, #00d4ff 100%);
+            --glow-cyan: 0 0 40px rgba(0, 212, 255, 0.3);
+            --glow-magenta: 0 0 40px rgba(255, 0, 170, 0.3);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Selection */
+        ::selection {
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .nav.scrolled {
+            padding: 1rem 2rem;
+            background: rgba(10, 10, 15, 0.95);
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+
+        .nav-logo svg {
+            width: 36px;
+            height: 36px;
+        }
+
+        .nav-logo span {
+            font-weight: 700;
+            font-size: 1.25rem;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2.5rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.3s ease;
+            position: relative;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--gradient-1);
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .nav-cta {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+        }
+
+        .btn-ghost:hover {
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+        }
+
+        .btn-primary {
+            background: var(--gradient-1);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--glow-cyan);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: var(--glow-cyan);
+        }
+
+        .btn-large {
+            padding: 1rem 2rem;
+            font-size: 1rem;
+        }
+
+        /* Hero */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 8rem 2rem 4rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-bg {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+        }
+
+        .hero-bg::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 30%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 70%, rgba(255, 0, 170, 0.08) 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            50% { transform: translate(-2%, 2%) rotate(5deg); }
+        }
+
+        .hero-grid {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+            mask-image: radial-gradient(ellipse at center, black 0%, transparent 70%);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 100px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .hero-badge .dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        .hero h1 {
+            font-size: clamp(3rem, 8vw, 5.5rem);
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.03em;
+            animation: fadeInUp 0.8s ease 0.1s both;
+        }
+
+        .hero h1 .gradient {
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 2.5rem;
+            animation: fadeInUp 0.8s ease 0.2s both;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeInUp 0.8s ease 0.3s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero-visual {
+            margin-top: 4rem;
+            position: relative;
+            animation: fadeInUp 0.8s ease 0.4s both;
+        }
+
+        /* Terminal */
+        .terminal {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            max-width: 700px;
+            margin: 0 auto;
+            text-align: left;
+        }
+
+        .terminal-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 1.25rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .terminal-dot.red { background: #ff5f56; }
+        .terminal-dot.yellow { background: #ffbd2e; }
+        .terminal-dot.green { background: #27c93f; }
+
+        .terminal-title {
+            flex: 1;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        .terminal-body {
+            padding: 1.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            line-height: 1.8;
+        }
+
+        .terminal-line {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .terminal-prompt {
+            color: var(--accent-green);
+            margin-right: 0.5rem;
+        }
+
+        .terminal-cmd {
+            color: var(--text-primary);
+        }
+
+        .terminal-output {
+            color: var(--text-secondary);
+            margin-left: 1rem;
+        }
+
+        .terminal-ascii {
+            color: var(--accent-magenta);
+            white-space: pre;
+            font-size: 0.65rem;
+            line-height: 1.2;
+        }
+
+        .terminal-menu {
+            color: var(--accent-cyan);
+        }
+
+        .terminal-success {
+            color: var(--accent-green);
+        }
+
+        /* Sections */
+        section {
+            padding: 6rem 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .section-label {
+            display: inline-block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .section-subtitle {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Features */
+        .features {
+            background: var(--bg-secondary);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient-1);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(0, 212, 255, 0.3);
+            box-shadow: var(--glow-cyan);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-icon {
+            width: 56px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+        }
+
+        .feature-card:nth-child(1) .feature-icon { background: linear-gradient(135deg, rgba(0,212,255,0.2), rgba(0,212,255,0.05)); }
+        .feature-card:nth-child(2) .feature-icon { background: linear-gradient(135deg, rgba(255,0,170,0.2), rgba(255,0,170,0.05)); }
+        .feature-card:nth-child(3) .feature-icon { background: linear-gradient(135deg, rgba(255,204,0,0.2), rgba(255,204,0,0.05)); }
+        .feature-card:nth-child(4) .feature-icon { background: linear-gradient(135deg, rgba(0,255,136,0.2), rgba(0,255,136,0.05)); }
+        .feature-card:nth-child(5) .feature-icon { background: linear-gradient(135deg, rgba(136,0,255,0.2), rgba(136,0,255,0.05)); }
+        .feature-card:nth-child(6) .feature-icon { background: linear-gradient(135deg, rgba(255,136,0,0.2), rgba(255,136,0,0.05)); }
+
+        .feature-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-desc {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* Formats */
+        .formats-wrapper {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .format-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+        }
+
+        .format-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .format-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 1.25rem;
+        }
+
+        .format-card:nth-child(1) .format-icon { background: var(--gradient-1); }
+        .format-card:nth-child(2) .format-icon { background: var(--gradient-2); }
+        .format-card:nth-child(3) .format-icon { background: linear-gradient(135deg, #ffcc00, #ff6600); }
+        .format-card:nth-child(4) .format-icon { background: var(--gradient-3); }
+
+        .format-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .format-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .format-tag {
+            display: inline-block;
+            padding: 0.35rem 0.75rem;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-family: var(--font-mono);
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+
+        .format-tag:hover {
+            color: var(--accent-cyan);
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        /* Compression Levels */
+        .compression {
+            background: var(--bg-secondary);
+        }
+
+        .compression-table {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .compression-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .compression-table th,
+        .compression-table td {
+            padding: 1.25rem 1.5rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .compression-table th {
+            background: var(--bg-tertiary);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+        }
+
+        .compression-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .compression-table tr:hover td {
+            background: rgba(0, 212, 255, 0.03);
+        }
+
+        .level-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .level-badge.max { background: linear-gradient(135deg, rgba(0,255,136,0.2), rgba(0,255,136,0.05)); color: #00ff88; }
+        .level-badge.high { background: linear-gradient(135deg, rgba(0,212,255,0.2), rgba(0,212,255,0.05)); color: #00d4ff; }
+        .level-badge.medium { background: linear-gradient(135deg, rgba(255,204,0,0.2), rgba(255,204,0,0.05)); color: #ffcc00; }
+        .level-badge.low { background: linear-gradient(135deg, rgba(255,0,170,0.2), rgba(255,0,170,0.05)); color: #ff00aa; }
+
+        .mono {
+            font-family: var(--font-mono);
+            color: var(--text-secondary);
+        }
+
+        /* CTA */
+        .cta {
+            text-align: center;
+            padding: 8rem 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center, rgba(0, 212, 255, 0.1) 0%, transparent 70%);
+        }
+
+        .cta-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta h2 {
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+        }
+
+        .cta p {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            margin-bottom: 2.5rem;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 3rem 2rem;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        .footer-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .footer-logo svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .footer-logo span {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent-cyan);
+        }
+
+        .footer-copy {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero {
+                padding: 7rem 1.5rem 3rem;
+            }
+
+            .terminal {
+                margin: 0 -0.5rem;
+                border-radius: 8px;
+            }
+
+            .terminal-body {
+                padding: 1rem;
+                font-size: 0.75rem;
+            }
+
+            .terminal-ascii {
+                font-size: 0.5rem;
+            }
+
+            section {
+                padding: 4rem 1.5rem;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .footer-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .compression-table {
+                overflow-x: auto;
+            }
+
+            .compression-table th,
+            .compression-table td {
+                padding: 1rem;
+                font-size: 0.85rem;
+            }
+        }
+
+        /* Animations on scroll */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Menu mobile */
+        .menu-toggle {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .menu-toggle span {
+            width: 24px;
+            height: 2px;
+            background: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: flex;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav" id="nav">
+        <a href="#" class="nav-logo">
+            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="2" width="36" height="36" rx="8" stroke="url(#logoGrad)" stroke-width="2.5"/>
+                <path d="M12 14h16M12 20h12M12 26h8" stroke="url(#logoGrad)" stroke-width="2.5" stroke-linecap="round"/>
+                <circle cx="28" cy="26" r="6" fill="url(#logoGrad)"/>
+                <path d="M26 26l2 2 3-4" stroke="#0a0a0f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <defs>
+                    <linearGradient id="logoGrad" x1="0" y1="0" x2="40" y2="40">
+                        <stop stop-color="#00d4ff"/>
+                        <stop offset="1" stop-color="#ff00aa"/>
+                    </linearGradient>
+                </defs>
+            </svg>
+            <span>File Converter</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#formats">Formats</a></li>
+            <li><a href="#compression">Compression</a></li>
+            <li><a href="https://github.com/nocodeboy/file-converter" target="_blank">GitHub</a></li>
+        </ul>
+        <div class="nav-cta">
+            <a href="https://github.com/nocodeboy/file-converter" class="btn btn-ghost" target="_blank">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                Star
+            </a>
+            <a href="https://github.com/nocodeboy/file-converter/releases" class="btn btn-primary" target="_blank">Download</a>
+        </div>
+        <div class="menu-toggle" id="menuToggle">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-bg">
+            <div class="hero-grid"></div>
+        </div>
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="dot"></span>
+                Open Source & Free Forever
+            </div>
+            <h1>Convert <span class="gradient">Any File</span><br>In Seconds</h1>
+            <p class="hero-subtitle">A powerful, open-source file conversion and compression tool for Windows. Images, audio, video, documents - all in one place.</p>
+            <div class="hero-buttons">
+                <a href="app/" class="btn btn-primary btn-large">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                    Try Web App
+                </a>
+                <a href="https://github.com/nocodeboy/file-converter/releases" class="btn btn-secondary btn-large" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Download CLI
+                </a>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="terminal">
+                <div class="terminal-header">
+                    <span class="terminal-dot red"></span>
+                    <span class="terminal-dot yellow"></span>
+                    <span class="terminal-dot green"></span>
+                    <span class="terminal-title">File Converter v1.2.0</span>
+                </div>
+                <div class="terminal-body">
+                    <div class="terminal-ascii">
+  ######  ### ##       ########
+  ##       ## ##       ##
+  #####    ## ##       #####
+  ##       ## ##       ##
+  ##      ### ######## ########
+                    </div>
+                    <br>
+                    <div class="terminal-menu">
+  MAIN MENU<br>
+  ─────────────────────────────<br>
+  [1] IMAGES     - Convert or Compress<br>
+  [2] AUDIO      - Convert or Compress<br>
+  [3] VIDEO      - Convert or Compress<br>
+  [4] DOCUMENTS  - Convert formats<br><br>
+  [5] Open INPUT folder<br>
+  [6] Open OUTPUT folder<br>
+                    </div>
+                    <br>
+                    <div class="terminal-line">
+                        <span class="terminal-prompt">></span>
+                        <span class="terminal-cmd">1</span>
+                    </div>
+                    <div class="terminal-output terminal-success">
+                        Converting 12 images to WEBP... Done!<br>
+                        Saved 45.2 MB (68% reduction)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header fade-in">
+                <span class="section-label">Features</span>
+                <h2 class="section-title">Everything You Need</h2>
+                <p class="section-subtitle">A complete toolkit for converting and compressing your files, right from your terminal.</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card fade-in">
+                    <div class="feature-icon">🖼️</div>
+                    <h3 class="feature-title">Image Conversion</h3>
+                    <p class="feature-desc">Convert between PNG, JPG, WEBP, GIF, ICO, BMP, TIFF and more with quality control.</p>
+                </div>
+                <div class="feature-card fade-in">
+                    <div class="feature-icon">🎵</div>
+                    <h3 class="feature-title">Audio Processing</h3>
+                    <p class="feature-desc">Handle MP3, WAV, FLAC, AAC, OGG, M4A with customizable bitrate compression.</p>
+                </div>
+                <div class="feature-card fade-in">
+                    <div class="feature-icon">🎬</div>
+                    <h3 class="feature-title">Video Conversion</h3>
+                    <p class="feature-desc">Process MP4, AVI, MKV, MOV, WEBM with CRF quality presets and 720p downscaling.</p>
+                </div>
+                <div class="feature-card fade-in">
+                    <div class="feature-icon">📄</div>
+                    <h3 class="feature-title">Document Formats</h3>
+                    <p class="feature-desc">Convert Markdown, HTML, DOCX, TXT, EPUB, PDF and more using Pandoc.</p>
+                </div>
+                <div class="feature-card fade-in">
+                    <div class="feature-icon">📊</div>
+                    <h3 class="feature-title">Smart Compression</h3>
+                    <p class="feature-desc">4 quality levels with real-time size savings display. See exactly how much space you save.</p>
+                </div>
+                <div class="feature-card fade-in">
+                    <div class="feature-icon">🚀</div>
+                    <h3 class="feature-title">Simple Interface</h3>
+                    <p class="feature-desc">Easy-to-use interactive menu. No command line knowledge required - just select options.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Formats -->
+    <section id="formats">
+        <div class="container">
+            <div class="section-header fade-in">
+                <span class="section-label">Supported Formats</span>
+                <h2 class="section-title">Works With Everything</h2>
+                <p class="section-subtitle">Comprehensive format support for all your conversion needs.</p>
+            </div>
+            <div class="formats-wrapper">
+                <div class="format-card fade-in">
+                    <div class="format-header">
+                        <div class="format-icon">🖼️</div>
+                        <h3 class="format-title">Images</h3>
+                    </div>
+                    <div class="format-tags">
+                        <span class="format-tag">PNG</span>
+                        <span class="format-tag">JPG</span>
+                        <span class="format-tag">WEBP</span>
+                        <span class="format-tag">GIF</span>
+                        <span class="format-tag">ICO</span>
+                        <span class="format-tag">BMP</span>
+                        <span class="format-tag">TIFF</span>
+                        <span class="format-tag">SVG</span>
+                        <span class="format-tag">HEIC</span>
+                        <span class="format-tag">PDF</span>
+                    </div>
+                </div>
+                <div class="format-card fade-in">
+                    <div class="format-header">
+                        <div class="format-icon">🎵</div>
+                        <h3 class="format-title">Audio</h3>
+                    </div>
+                    <div class="format-tags">
+                        <span class="format-tag">MP3</span>
+                        <span class="format-tag">WAV</span>
+                        <span class="format-tag">FLAC</span>
+                        <span class="format-tag">AAC</span>
+                        <span class="format-tag">OGG</span>
+                        <span class="format-tag">M4A</span>
+                        <span class="format-tag">WMA</span>
+                        <span class="format-tag">AIFF</span>
+                        <span class="format-tag">OPUS</span>
+                    </div>
+                </div>
+                <div class="format-card fade-in">
+                    <div class="format-header">
+                        <div class="format-icon">🎬</div>
+                        <h3 class="format-title">Video</h3>
+                    </div>
+                    <div class="format-tags">
+                        <span class="format-tag">MP4</span>
+                        <span class="format-tag">AVI</span>
+                        <span class="format-tag">MKV</span>
+                        <span class="format-tag">MOV</span>
+                        <span class="format-tag">WEBM</span>
+                        <span class="format-tag">WMV</span>
+                        <span class="format-tag">FLV</span>
+                        <span class="format-tag">GIF</span>
+                        <span class="format-tag">3GP</span>
+                    </div>
+                </div>
+                <div class="format-card fade-in">
+                    <div class="format-header">
+                        <div class="format-icon">📄</div>
+                        <h3 class="format-title">Documents</h3>
+                    </div>
+                    <div class="format-tags">
+                        <span class="format-tag">PDF</span>
+                        <span class="format-tag">DOCX</span>
+                        <span class="format-tag">HTML</span>
+                        <span class="format-tag">TXT</span>
+                        <span class="format-tag">MD</span>
+                        <span class="format-tag">EPUB</span>
+                        <span class="format-tag">ODT</span>
+                        <span class="format-tag">RST</span>
+                        <span class="format-tag">TEX</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Compression -->
+    <section class="compression" id="compression">
+        <div class="container">
+            <div class="section-header fade-in">
+                <span class="section-label">Compression</span>
+                <h2 class="section-title">Quality Presets</h2>
+                <p class="section-subtitle">Choose the right balance between quality and file size.</p>
+            </div>
+            <div class="compression-table fade-in">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Level</th>
+                            <th>Images</th>
+                            <th>Video (CRF)</th>
+                            <th>Audio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="level-badge max">1 - Maximum</span></td>
+                            <td class="mono">95% quality</td>
+                            <td class="mono">CRF 18</td>
+                            <td class="mono">320 kbps</td>
+                        </tr>
+                        <tr>
+                            <td><span class="level-badge high">2 - High</span></td>
+                            <td class="mono">85% quality</td>
+                            <td class="mono">CRF 23</td>
+                            <td class="mono">192 kbps</td>
+                        </tr>
+                        <tr>
+                            <td><span class="level-badge medium">3 - Medium</span></td>
+                            <td class="mono">70% quality</td>
+                            <td class="mono">CRF 28</td>
+                            <td class="mono">128 kbps</td>
+                        </tr>
+                        <tr>
+                            <td><span class="level-badge low">4 - Low</span></td>
+                            <td class="mono">50% quality</td>
+                            <td class="mono">CRF 35</td>
+                            <td class="mono">64 kbps</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta">
+        <div class="cta-content fade-in">
+            <h2>Ready to <span class="gradient">Convert</span>?</h2>
+            <p>Download File Converter now and start converting your files in seconds.</p>
+            <div class="cta-buttons">
+                <a href="app/" class="btn btn-primary btn-large">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                    Open Web App
+                </a>
+                <a href="https://github.com/nocodeboy/file-converter/releases" class="btn btn-secondary btn-large" target="_blank">
+                    Download CLI
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-logo">
+                <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="2" width="36" height="36" rx="8" stroke="url(#logoGrad2)" stroke-width="2"/>
+                    <path d="M12 14h16M12 20h12M12 26h8" stroke="url(#logoGrad2)" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="28" cy="26" r="5" fill="url(#logoGrad2)"/>
+                    <defs>
+                        <linearGradient id="logoGrad2" x1="0" y1="0" x2="40" y2="40">
+                            <stop stop-color="#00d4ff"/>
+                            <stop offset="1" stop-color="#ff00aa"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <span>File Converter</span>
+            </div>
+            <div class="footer-links">
+                <a href="https://github.com/nocodeboy/file-converter" target="_blank">GitHub</a>
+                <a href="https://github.com/nocodeboy/file-converter/releases" target="_blank">Releases</a>
+                <a href="CONTRIBUTING.md">Contributing</a>
+                <a href="LICENSE">MIT License</a>
+            </div>
+            <div class="footer-copy">
+                Made with passion by <a href="https://github.com/nocodeboy" target="_blank" style="color: var(--accent-cyan);">German Huertas</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Navbar scroll effect
+        const nav = document.getElementById('nav');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                nav.classList.add('scrolled');
+            } else {
+                nav.classList.remove('scrolled');
+            }
+        });
+
+        // Fade in on scroll
+        const fadeElements = document.querySelectorAll('.fade-in');
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        fadeElements.forEach(el => observer.observe(el));
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Terminal typing effect
+        const terminalOutput = document.querySelector('.terminal-success');
+        if (terminalOutput) {
+            const text = terminalOutput.innerHTML;
+            terminalOutput.innerHTML = '';
+            let i = 0;
+            const typeEffect = () => {
+                if (i < text.length) {
+                    terminalOutput.innerHTML = text.substring(0, i + 1);
+                    i++;
+                    setTimeout(typeEffect, 20);
+                }
+            };
+            // Start typing when terminal is visible
+            const terminalObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        setTimeout(typeEffect, 500);
+                        terminalObserver.disconnect();
+                    }
+                });
+            }, { threshold: 0.5 });
+            terminalObserver.observe(document.querySelector('.terminal'));
+        }
+    </script>
+</body>
+</html>

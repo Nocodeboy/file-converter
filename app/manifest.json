@@ -1,0 +1,33 @@
+{
+    "name": "File Converter",
+    "short_name": "Converter",
+    "description": "Convert files privately in your browser. No uploads, no servers.",
+    "start_url": "./",
+    "display": "standalone",
+    "background_color": "#0a0a0f",
+    "theme_color": "#0a0a0f",
+    "orientation": "any",
+    "icons": [
+        {
+            "src": "../assets/logo.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": ["utilities", "productivity"],
+    "shortcuts": [
+        {
+            "name": "Convert Images",
+            "short_name": "Images",
+            "description": "Convert image files",
+            "url": "./?type=image"
+        },
+        {
+            "name": "Convert Video",
+            "short_name": "Video",
+            "description": "Convert video files",
+            "url": "./?type=video"
+        }
+    ]
+}
