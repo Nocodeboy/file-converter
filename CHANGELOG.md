@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-01-27
+
+### Added
+- **Web App**: Browser-based PWA for file conversion (no installation required)
+- **Privacy**: All processing happens locally in the browser - files never leave the device
+- **Image Conversion**: Using Canvas API (PNG, JPEG, WebP, GIF)
+- **Audio/Video Conversion**: Using FFmpeg.wasm (MP3, WAV, OGG, MP4, WebM, GIF)
+- **Landing Page**: Modern Awwwards-level design with dark mode
+- **Visual Identity**: New SVG logo and favicon with gradient design
+- **Offline Support**: Service Worker for PWA functionality
+- **GitHub Pages**: Configured for static hosting with COOP/COEP headers
+
+### Technical
+- FFmpeg.wasm for browser-based audio/video processing
+- Canvas API for zero-dependency image conversion
+- coi-serviceworker for SharedArrayBuffer support on GitHub Pages
+- Drag & drop file upload with quality slider
+- Responsive design for mobile devices
+
 ## [1.2.0] - 2026-01-27
 
 ### Changed
