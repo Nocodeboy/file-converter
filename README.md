@@ -26,6 +26,14 @@
 
 ---
 
+## 🌐 Web App (NEW!)
+
+**Try the browser-based version!** No installation required, 100% private - files never leave your device.
+
+**[Open Web App](app/)** | Powered by WebAssembly
+
+---
+
 ## ✨ Features
 
 - **�️ Image Conversion & Compression** - Convert between PNG, JPG, WEBP, GIF, ICO, BMP, TIFF and more
