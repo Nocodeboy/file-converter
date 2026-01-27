@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+
+# Test files - don't commit user files
+INPUT/images/*
+INPUT/audio/*
+INPUT/video/*
+INPUT/documents/*
+OUTPUT/images/*
+OUTPUT/audio/*
+OUTPUT/video/*
+OUTPUT/documents/*
+
+# Keep folder structure
+!INPUT/images/.gitkeep
+!INPUT/audio/.gitkeep
+!INPUT/video/.gitkeep
+!INPUT/documents/.gitkeep
+!OUTPUT/images/.gitkeep
+!OUTPUT/audio/.gitkeep
+!OUTPUT/video/.gitkeep
+!OUTPUT/documents/.gitkeep
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+~$*
