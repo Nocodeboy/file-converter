@@ -15,13 +15,13 @@ $audioFormatosSalida = @{
 }
 
 function Show-AudioFormats {
-    Write-Host ""
-    Write-Host "  Available output formats:" -ForegroundColor Cyan
-    Write-Host "  ---------------------------------" -ForegroundColor DarkGray
+    Write-Log "" "" "Cyan"
+    Write-Log "  Available output formats:" "INFO" "Cyan"
+    Write-Log "  ---------------------------------" "INFO" "DarkGray"
     foreach ($key in ($audioFormatosSalida.Keys | Sort-Object { [int]$_ })) {
-        Write-Host "    [$key] $($audioFormatosSalida[$key].name)" -ForegroundColor White
+        Write-Log "    [$key] $($audioFormatosSalida[$key].name)" "INFO" "White"
     }
-    Write-Host ""
+    Write-Log "" "" "White"
 }
 
 function Convert-Audio {
@@ -32,7 +32,7 @@ function Convert-Audio {
     )
 
     if (-not $audioFormatosSalida.ContainsKey($OutputFormat)) {
-        Write-Host "[X] Invalid format" -ForegroundColor Red
+        Write-Log "[X] Invalid format" "ERROR" "Red"
         return 0
     }
 
@@ -40,20 +40,20 @@ function Convert-Audio {
     $archivos = Get-ChildItem -Path $InputFolder -File | Where-Object { $audioFormatosEntrada -contains $_.Extension.ToLower() }
 
     if ($archivos.Count -eq 0) {
-        Write-Host "No audio files to convert in INPUT/audio/" -ForegroundColor Yellow
+        Write-Log "No audio files to convert in INPUT/audio/" "WARN" "Yellow"
         return 0
     }
 
-    Write-Host ""
-    Write-Host "Converting $($archivos.Count) audio file(s) to $($formato.name)..." -ForegroundColor Cyan
-    Write-Host ""
+    Write-Log "" "" "Cyan"
+    Write-Log "Converting $($archivos.Count) audio file(s) to $($formato.name)..." "INFO" "Cyan"
+    Write-Log "" "" "Cyan"
 
     $converted = 0
     foreach ($archivo in $archivos) {
         $outputName = [System.IO.Path]::GetFileNameWithoutExtension($archivo.Name) + "." + $formato.ext
         $outputPath = Join-Path $OutputFolder $outputName
 
-        Write-Host "  $($archivo.Name) -> $outputName" -ForegroundColor Gray -NoNewline
+        Write-Log "  $($archivo.Name) -> $outputName" "INFO" "Gray" $true
 
         try {
             $params = @("-i", $archivo.FullName, "-y") + $formato.params + @($outputPath)
@@ -61,15 +61,15 @@ function Convert-Audio {
             & ffmpeg @params 2>&1 | Out-Null
 
             if ($LASTEXITCODE -eq 0 -and (Test-Path $outputPath)) {
-                Write-Host " [OK]" -ForegroundColor Green
+                Write-Log " [OK]" "INFO" "Green"
                 $converted++
             }
             else {
-                Write-Host " [ERROR]" -ForegroundColor Red
+                Write-Log " [ERROR]" "ERROR" "Red"
             }
         }
         catch {
-            Write-Host " [ERROR] $_" -ForegroundColor Red
+            Write-Log " [ERROR] $_" "ERROR" "Red"
         }
     }
 

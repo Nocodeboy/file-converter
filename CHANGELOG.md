@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-01-27
+
+### Changed
+- **Refactoring**: Massive cleanup of `CONVERT.ps1` and all conversion modules
+- **Architecture**: Created shared `scripts/utils.ps1` module for core logic
+- **Logging**: Implemented central logging system (`logs/activity.log`)
+- **UI**: Standardized headers and output messages across all tools
+
 ## [1.1.0] - 2026-01-27
 
 ### Added

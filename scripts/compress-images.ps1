@@ -7,16 +7,16 @@
 $compressImageFormats = @(".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".tif", ".webp")
 
 function Show-ImageCompressionLevels {
-    Write-Host ""
-    Write-Host "  Compression levels:" -ForegroundColor Cyan
-    Write-Host "  ---------------------------------" -ForegroundColor DarkGray
-    Write-Host "    [1] MAXIMUM   - 95% quality (professional photography)" -ForegroundColor White
-    Write-Host "    [2] HIGH      - 85% quality (general use)" -ForegroundColor White
-    Write-Host "    [3] MEDIUM    - 70% quality (web/email)" -ForegroundColor White
-    Write-Host "    [4] LOW       - 50% quality (thumbnails)" -ForegroundColor White
-    Write-Host ""
-    Write-Host "  Output format: WEBP (best compression) or JPG" -ForegroundColor DarkGray
-    Write-Host ""
+    Write-Log "" "" "Cyan"
+    Write-Log "  Compression levels:" "INFO" "Cyan"
+    Write-Log "  ---------------------------------" "INFO" "DarkGray"
+    Write-Log "    [1] MAXIMUM   - 95% quality (professional photography)" "INFO" "White"
+    Write-Log "    [2] HIGH      - 85% quality (general use)" "INFO" "White"
+    Write-Log "    [3] MEDIUM    - 70% quality (web/email)" "INFO" "White"
+    Write-Log "    [4] LOW       - 50% quality (thumbnails)" "INFO" "White"
+    Write-Log "" "" "White"
+    Write-Log "  Output format: WEBP (best compression) or JPG" "INFO" "DarkGray"
+    Write-Log "" "" "White"
 }
 
 function Compress-Images {
@@ -35,7 +35,7 @@ function Compress-Images {
     }
 
     if (-not $qualityMap.ContainsKey($Level)) {
-        Write-Host "[X] Invalid level" -ForegroundColor Red
+        Write-Log "[X] Invalid level" "ERROR" "Red"
         return 0
     }
 
@@ -43,13 +43,13 @@ function Compress-Images {
     $files = Get-ChildItem -Path $InputFolder -File | Where-Object { $compressImageFormats -contains $_.Extension.ToLower() }
 
     if ($files.Count -eq 0) {
-        Write-Host "No images to compress in INPUT/images/" -ForegroundColor Yellow
+        Write-Log "No images to compress in INPUT/images/" "WARN" "Yellow"
         return 0
     }
 
-    Write-Host ""
-    Write-Host "Compressing $($files.Count) image(s) at $quality% quality..." -ForegroundColor Cyan
-    Write-Host ""
+    Write-Log "" "" "Cyan"
+    Write-Log "Compressing $($files.Count) image(s) at $quality% quality..." "INFO" "Cyan"
+    Write-Log "" "" "Cyan"
 
     $processed = 0
     $totalSaved = 0
@@ -59,7 +59,7 @@ function Compress-Images {
         $outputName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name) + "_compressed." + $OutputFormat
         $outputPath = Join-Path $OutputFolder $outputName
 
-        Write-Host "  $($file.Name)" -ForegroundColor Gray -NoNewline
+        Write-Log "  $($file.Name)" "INFO" "Gray" $true
 
         try {
             $params = @($file.FullName, "-quality", "$quality", "-strip", $outputPath)
@@ -76,26 +76,26 @@ function Compress-Images {
                 $totalSaved += ($originalSize - $newSize)
                 
                 if ($savings -gt 0) {
-                    Write-Host " -> $outputName [-$savings%]" -ForegroundColor Green
+                    Write-Log " -> $outputName [-$savings%]" "INFO" "Green"
                 }
                 else {
-                    Write-Host " -> $outputName [no improvement]" -ForegroundColor Yellow
+                    Write-Log " -> $outputName [no improvement]" "WARN" "Yellow"
                 }
                 $processed++
             }
             else {
-                Write-Host " [ERROR]" -ForegroundColor Red
+                Write-Log " [ERROR]" "ERROR" "Red"
             }
         }
         catch {
-            Write-Host " [ERROR] $_" -ForegroundColor Red
+            Write-Log " [ERROR] $_" "ERROR" "Red"
         }
     }
 
     if ($totalSaved -gt 0) {
         $savedMB = [math]::Round($totalSaved / 1MB, 2)
-        Write-Host ""
-        Write-Host "  TOTAL SAVED: $savedMB MB" -ForegroundColor Green
+        Write-Log "" "" "Green"
+        Write-Log "  TOTAL SAVED: $savedMB MB" "INFO" "Green"
     }
 
     return $processed

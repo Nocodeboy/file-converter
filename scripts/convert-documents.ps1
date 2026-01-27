@@ -16,15 +16,15 @@ $docFormatosSalida = @{
 }
 
 function Show-DocumentFormats {
-    Write-Host ""
-    Write-Host "  Available output formats:" -ForegroundColor Cyan
-    Write-Host "  ---------------------------------" -ForegroundColor DarkGray
+    Write-Log "" "" "Cyan"
+    Write-Log "  Available output formats:" "INFO" "Cyan"
+    Write-Log "  ---------------------------------" "INFO" "DarkGray"
     foreach ($key in ($docFormatosSalida.Keys | Sort-Object { [int]$_ })) {
-        Write-Host "    [$key] $($docFormatosSalida[$key].name)" -ForegroundColor White
+        Write-Log "    [$key] $($docFormatosSalida[$key].name)" "INFO" "White"
     }
-    Write-Host ""
-    Write-Host "  [!] PDF requires LaTeX installed (MiKTeX or TeX Live)" -ForegroundColor Yellow
-    Write-Host ""
+    Write-Log "" "" "White"
+    Write-Log "  [!] PDF requires LaTeX installed (MiKTeX or TeX Live)" "INFO" "Yellow"
+    Write-Log "" "" "White"
 }
 
 function Convert-Documents {
@@ -35,7 +35,7 @@ function Convert-Documents {
     )
 
     if (-not $docFormatosSalida.ContainsKey($OutputFormat)) {
-        Write-Host "[X] Invalid format" -ForegroundColor Red
+        Write-Log "[X] Invalid format" "ERROR" "Red"
         return 0
     }
 
@@ -43,20 +43,20 @@ function Convert-Documents {
     $archivos = Get-ChildItem -Path $InputFolder -File | Where-Object { $docFormatosEntrada -contains $_.Extension.ToLower() }
 
     if ($archivos.Count -eq 0) {
-        Write-Host "No documents to convert in INPUT/documents/" -ForegroundColor Yellow
+        Write-Log "No documents to convert in INPUT/documents/" "WARN" "Yellow"
         return 0
     }
 
-    Write-Host ""
-    Write-Host "Converting $($archivos.Count) document(s) to $($formato.name)..." -ForegroundColor Cyan
-    Write-Host ""
+    Write-Log "" "" "Cyan"
+    Write-Log "Converting $($archivos.Count) document(s) to $($formato.name)..." "INFO" "Cyan"
+    Write-Log "" "" "Cyan"
 
     $converted = 0
     foreach ($archivo in $archivos) {
         $outputName = [System.IO.Path]::GetFileNameWithoutExtension($archivo.Name) + "." + $formato.ext
         $outputPath = Join-Path $OutputFolder $outputName
 
-        Write-Host "  $($archivo.Name) -> $outputName" -ForegroundColor Gray -NoNewline
+        Write-Log "  $($archivo.Name) -> $outputName" "INFO" "Gray" $true
 
         try {
             $params = @($archivo.FullName, "-o", $outputPath)
@@ -68,7 +68,7 @@ function Convert-Documents {
             & pandoc @params 2>&1 | Out-Null
 
             if ($LASTEXITCODE -eq 0 -and (Test-Path $outputPath)) {
-                Write-Host " [OK]" -ForegroundColor Green
+                Write-Log " [OK]" "INFO" "Green"
                 $converted++
             }
             else {
@@ -76,20 +76,20 @@ function Convert-Documents {
                     $params = @($archivo.FullName, "-o", $outputPath)
                     & pandoc @params 2>&1 | Out-Null
                     if ($LASTEXITCODE -eq 0 -and (Test-Path $outputPath)) {
-                        Write-Host " [OK]" -ForegroundColor Green
+                        Write-Log " [OK]" "INFO" "Green"
                         $converted++
                     }
                     else {
-                        Write-Host " [ERROR] (LaTeX installed?)" -ForegroundColor Red
+                        Write-Log " [ERROR] (LaTeX installed?)" "ERROR" "Red"
                     }
                 }
                 else {
-                    Write-Host " [ERROR]" -ForegroundColor Red
+                    Write-Log " [ERROR]" "ERROR" "Red"
                 }
             }
         }
         catch {
-            Write-Host " [ERROR] $_" -ForegroundColor Red
+            Write-Log " [ERROR] $_" "ERROR" "Red"
         }
     }
 

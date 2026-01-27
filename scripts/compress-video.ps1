@@ -7,17 +7,17 @@
 $compressVideoFormats = @(".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".m4v", ".mpeg", ".mpg")
 
 function Show-VideoCompressionLevels {
-    Write-Host ""
-    Write-Host "  Compression levels:" -ForegroundColor Cyan
-    Write-Host "  ---------------------------------" -ForegroundColor DarkGray
-    Write-Host "    [1] MAXIMUM   - CRF 18 (archive/editing)" -ForegroundColor White
-    Write-Host "    [2] HIGH      - CRF 23 (general use)" -ForegroundColor White
-    Write-Host "    [3] MEDIUM    - CRF 28 (share online)" -ForegroundColor White
-    Write-Host "    [4] LOW       - CRF 35 (previews, max savings)" -ForegroundColor White
-    Write-Host ""
-    Write-Host "  Additional options:" -ForegroundColor DarkGray
-    Write-Host "    [R] Downscale resolution to 720p" -ForegroundColor DarkCyan
-    Write-Host ""
+    Write-Log "" "" "Cyan"
+    Write-Log "  Compression levels:" "INFO" "Cyan"
+    Write-Log "  ---------------------------------" "INFO" "DarkGray"
+    Write-Log "    [1] MAXIMUM   - CRF 18 (archive/editing)" "INFO" "White"
+    Write-Log "    [2] HIGH      - CRF 23 (general use)" "INFO" "White"
+    Write-Log "    [3] MEDIUM    - CRF 28 (share online)" "INFO" "White"
+    Write-Log "    [4] LOW       - CRF 35 (previews, max savings)" "INFO" "White"
+    Write-Log "" "" "White"
+    Write-Log "  Additional options:" "INFO" "DarkGray"
+    Write-Log "    [R] Downscale resolution to 720p" "INFO" "DarkCyan"
+    Write-Log "" "" "White"
 }
 
 function Compress-Video {
@@ -36,7 +36,7 @@ function Compress-Video {
     }
 
     if (-not $crfMap.ContainsKey($Level)) {
-        Write-Host "[X] Invalid level" -ForegroundColor Red
+        Write-Log "[X] Invalid level" "ERROR" "Red"
         return 0
     }
 
@@ -44,17 +44,17 @@ function Compress-Video {
     $files = Get-ChildItem -Path $InputFolder -File | Where-Object { $compressVideoFormats -contains $_.Extension.ToLower() }
 
     if ($files.Count -eq 0) {
-        Write-Host "No videos to compress in INPUT/video/" -ForegroundColor Yellow
+        Write-Log "No videos to compress in INPUT/video/" "WARN" "Yellow"
         return 0
     }
 
-    Write-Host ""
-    Write-Host "Compressing $($files.Count) video(s) with CRF $crf..." -ForegroundColor Cyan
+    Write-Log "" "" "Cyan"
+    Write-Log "Compressing $($files.Count) video(s) with CRF $crf..." "INFO" "Cyan"
     if ($Resize720) {
-        Write-Host "   (Downscaling to 720p)" -ForegroundColor DarkGray
+        Write-Log "   (Downscaling to 720p)" "INFO" "DarkGray"
     }
-    Write-Host "   (This may take several minutes per video)" -ForegroundColor DarkGray
-    Write-Host ""
+    Write-Log "   (This may take several minutes per video)" "INFO" "DarkGray"
+    Write-Log "" "" "Cyan"
 
     $processed = 0
     $totalSaved = 0
@@ -64,7 +64,7 @@ function Compress-Video {
         $outputName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name) + "_compressed.mp4"
         $outputPath = Join-Path $OutputFolder $outputName
 
-        Write-Host "  $($file.Name)" -ForegroundColor Gray -NoNewline
+        Write-Log "  $($file.Name)" "INFO" "Gray" $true
 
         try {
             $params = @("-i", $file.FullName, "-y", "-codec:v", "libx264", "-preset", "medium", "-crf", "$crf", "-codec:a", "aac", "-b:a", "128k")
@@ -86,26 +86,26 @@ function Compress-Video {
                 $newMB = [math]::Round($newSize / 1MB, 1)
                 
                 if ($savings -gt 0) {
-                    Write-Host " -> ${origMB}MB to ${newMB}MB [-$savings%]" -ForegroundColor Green
+                    Write-Log " -> ${origMB}MB to ${newMB}MB [-$savings%]" "INFO" "Green"
                 }
                 else {
-                    Write-Host " -> [no improvement]" -ForegroundColor Yellow
+                    Write-Log " -> [no improvement]" "WARN" "Yellow"
                 }
                 $processed++
             }
             else {
-                Write-Host " [ERROR]" -ForegroundColor Red
+                Write-Log " [ERROR]" "ERROR" "Red"
             }
         }
         catch {
-            Write-Host " [ERROR] $_" -ForegroundColor Red
+            Write-Log " [ERROR] $_" "ERROR" "Red"
         }
     }
 
     if ($totalSaved -gt 0) {
         $savedMB = [math]::Round($totalSaved / 1MB, 2)
-        Write-Host ""
-        Write-Host "  TOTAL SAVED: $savedMB MB" -ForegroundColor Green
+        Write-Log "" "" "Green"
+        Write-Log "  TOTAL SAVED: $savedMB MB" "INFO" "Green"
     }
 
     return $processed

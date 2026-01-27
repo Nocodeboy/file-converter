@@ -4,7 +4,7 @@
 # Convert and compress files easily
 # Supports: Images, Audio, Video, Documents
 # ============================================
-# Author: German Huertas (ghptiemblo@gmail.com)
+# Author: German Huertas (github.com/nocodeboy)
 # License: MIT
 # ============================================
 
@@ -17,6 +17,7 @@ $inputBase = Join-Path $scriptPath "INPUT"
 $outputBase = Join-Path $scriptPath "OUTPUT"
 
 # Load modules
+. "$scriptPath\scripts\utils.ps1"
 . "$scriptPath\scripts\convert-images.ps1"
 . "$scriptPath\scripts\convert-audio.ps1"
 . "$scriptPath\scripts\convert-video.ps1"
@@ -25,88 +26,34 @@ $outputBase = Join-Path $scriptPath "OUTPUT"
 . "$scriptPath\scripts\compress-audio.ps1"
 . "$scriptPath\scripts\compress-video.ps1"
 
-# Utility function to check available disk space
-function Test-DiskSpace {
-    param(
-        [string]$Path,
-        [long]$RequiredMB = 100
-    )
-    try {
-        $drive = (Get-Item $Path).PSDrive.Name
-        $driveInfo = Get-PSDrive -Name $drive
-        $freeSpaceMB = [math]::Round($driveInfo.Free / 1MB, 0)
-
-        if ($freeSpaceMB -lt $RequiredMB) {
-            Write-Host ""
-            Write-Host "  [WARNING] Low disk space: ${freeSpaceMB}MB available (need ${RequiredMB}MB)" -ForegroundColor Yellow
-            Write-Host "  Free up space before continuing to avoid conversion failures." -ForegroundColor Yellow
-            Write-Host ""
-            return $false
-        }
-        return $true
-    }
-    catch {
-        # If we can't check, assume it's OK
-        return $true
-    }
-}
-
-# Function to confirm before processing
-function Confirm-Action {
-    param([string]$Message)
-    $confirm = Read-Host "  $Message (Y/N)"
-    return ($confirm.ToUpper() -eq "Y")
-}
-
-function Show-Header {
-    Clear-Host
-    Write-Host ""
-    Write-Host "  =================================================================" -ForegroundColor Cyan
-    Write-Host "                                                                   " -ForegroundColor Cyan
-    Write-Host "   ######  ### ##       ########                                   " -ForegroundColor Magenta
-    Write-Host "   ##       ## ##       ##                                         " -ForegroundColor Magenta
-    Write-Host "   #####    ## ##       #####                                      " -ForegroundColor Magenta
-    Write-Host "   ##       ## ##       ##                                         " -ForegroundColor Magenta
-    Write-Host "   ##      ### ######## ########                                   " -ForegroundColor Magenta
-    Write-Host "                                                                   " -ForegroundColor Cyan
-    Write-Host "    ######  #######  ##    ## ##     ## ######## ########          " -ForegroundColor Yellow
-    Write-Host "   ##       ##   ##  ###   ## ##     ## ##       ##   ##           " -ForegroundColor Yellow
-    Write-Host "   ##       ##   ##  ## ## ## ##     ## #####    ######            " -ForegroundColor Yellow
-    Write-Host "   ##       ##   ##  ##   ### ##   ##   ##       ##  ##            " -ForegroundColor Yellow
-    Write-Host "    ######  #######  ##    ##   ###     ######## ##   ##           " -ForegroundColor Yellow
-    Write-Host "                                                                   " -ForegroundColor Cyan
-    Write-Host "  =================================================================" -ForegroundColor Cyan
-    Write-Host ""
-}
-
 function Show-MainMenu {
-    Write-Host "  -----------------------------------------------------------------" -ForegroundColor DarkGray
-    Write-Host "    MAIN MENU                                                      " -ForegroundColor White
-    Write-Host "  -----------------------------------------------------------------" -ForegroundColor DarkGray
-    Write-Host ""
-    Write-Host "    [1] IMAGES     - Convert or Compress" -ForegroundColor White
-    Write-Host "    [2] AUDIO      - Convert or Compress" -ForegroundColor White
-    Write-Host "    [3] VIDEO      - Convert or Compress" -ForegroundColor White
-    Write-Host "    [4] DOCUMENTS  - Convert formats" -ForegroundColor White
-    Write-Host ""
-    Write-Host "    [5] Open INPUT folder" -ForegroundColor DarkCyan
-    Write-Host "    [6] Open OUTPUT folder" -ForegroundColor DarkCyan
-    Write-Host ""
-    Write-Host "    [0] Exit" -ForegroundColor DarkGray
-    Write-Host ""
-    Write-Host "  -----------------------------------------------------------------" -ForegroundColor DarkGray
-    Write-Host ""
+    Write-Log "  -----------------------------------------------------------------" "INFO" "DarkGray"
+    Write-Log "    MAIN MENU                                                      " "INFO" "White"
+    Write-Log "  -----------------------------------------------------------------" "INFO" "DarkGray"
+    Write-Log "" "" "White"
+    Write-Log "    [1] IMAGES     - Convert or Compress" "INFO" "White"
+    Write-Log "    [2] AUDIO      - Convert or Compress" "INFO" "White"
+    Write-Log "    [3] VIDEO      - Convert or Compress" "INFO" "White"
+    Write-Log "    [4] DOCUMENTS  - Convert formats" "INFO" "White"
+    Write-Log "" "" "White"
+    Write-Log "    [5] Open INPUT folder" "INFO" "DarkCyan"
+    Write-Log "    [6] Open OUTPUT folder" "INFO" "DarkCyan"
+    Write-Log "" "" "White"
+    Write-Log "    [0] Exit" "INFO" "DarkGray"
+    Write-Log "" "" "White"
+    Write-Log "  -----------------------------------------------------------------" "INFO" "DarkGray"
+    Write-Log "" "" "White"
 }
 
 function Show-SubMenu {
     param([string]$Type)
-    Write-Host ""
-    Write-Host "  What do you want to do with $Type ?" -ForegroundColor Cyan
-    Write-Host "  ---------------------------------" -ForegroundColor DarkGray
-    Write-Host "    [C] CONVERT  - Change format" -ForegroundColor White
-    Write-Host "    [O] OPTIMIZE - Compress/reduce size" -ForegroundColor White
-    Write-Host "    [B] BACK     - Main menu" -ForegroundColor DarkGray
-    Write-Host ""
+    Write-Log "" "" "White"
+    Write-Log "  What do you want to do with $Type ?" "INFO" "Cyan"
+    Write-Log "  ---------------------------------" "INFO" "DarkGray"
+    Write-Log "    [C] CONVERT  - Change format" "INFO" "White"
+    Write-Log "    [O] OPTIMIZE - Compress/reduce size" "INFO" "White"
+    Write-Log "    [B] BACK     - Main menu" "INFO" "DarkGray"
+    Write-Log "" "" "White"
 }
 
 function Show-FileCount {
@@ -115,15 +62,9 @@ function Show-FileCount {
     $vidCount = (Get-ChildItem -Path "$inputBase\video" -File -ErrorAction SilentlyContinue | Measure-Object).Count
     $docCount = (Get-ChildItem -Path "$inputBase\documents" -File -ErrorAction SilentlyContinue | Measure-Object).Count
 
-    Write-Host "  Files in INPUT:" -ForegroundColor Cyan
-    Write-Host "     Images: $imgCount | Audio: $audCount | Video: $vidCount | Docs: $docCount" -ForegroundColor Gray
-    Write-Host ""
-}
-
-function Pause-Script {
-    Write-Host ""
-    Write-Host "  Press any key to continue..." -ForegroundColor DarkGray
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    Write-Log "  Files in INPUT:" "INFO" "Cyan"
+    Write-Log "     Images: $imgCount | Audio: $audCount | Video: $vidCount | Docs: $docCount" "INFO" "Gray"
+    Write-Log "" "" "White"
 }
 
 # Main loop
@@ -133,6 +74,7 @@ do {
     Show-MainMenu
 
     $option = Read-Host "  Select an option"
+    Write-Log "User selected option: $option" "DEBUG" "Black" # Hidden/Debug log
 
     switch ($option) {
         "1" {
@@ -144,7 +86,7 @@ do {
             switch ($sub.ToUpper()) {
                 "C" {
                     Show-Header
-                    Write-Host "  IMAGE CONVERSION" -ForegroundColor Magenta
+                    Write-Log "  IMAGE CONVERSION" "INFO" "Magenta"
                     Show-ImageFormats
                     $format = Read-Host "  Choose output format"
                     if ($format -ne "") {
@@ -154,14 +96,14 @@ do {
                 }
                 "O" {
                     Show-Header
-                    Write-Host "  IMAGE COMPRESSION" -ForegroundColor Magenta
+                    Write-Log "  IMAGE COMPRESSION" "INFO" "Magenta"
                     Show-ImageCompressionLevels
                     $level = Read-Host "  Choose compression level (1-4)"
                     
-                    Write-Host ""
-                    Write-Host "  Output format:" -ForegroundColor Cyan
-                    Write-Host "    [1] WEBP (best compression)" -ForegroundColor White
-                    Write-Host "    [2] JPG (most compatible)" -ForegroundColor White
+                    Write-Log "" "" "Cyan"
+                    Write-Log "  Output format:" "INFO" "Cyan"
+                    Write-Log "    [1] WEBP (best compression)" "INFO" "White"
+                    Write-Log "    [2] JPG (most compatible)" "INFO" "White"
                     $formatComp = Read-Host "  Choose format"
                     $outputFormat = if ($formatComp -eq "2") { "jpg" } else { "webp" }
                     
@@ -174,11 +116,7 @@ do {
         }
         "2" {
             # AUDIO
-            if (-not (Get-Command "ffmpeg" -ErrorAction SilentlyContinue)) {
-                Write-Host "  [X] FFmpeg not installed." -ForegroundColor Red
-                Pause-Script
-                continue
-            }
+            if (-not (Test-Dependency "ffmpeg" "FFmpeg")) { Pause-Script; continue }
             
             Show-Header
             Show-SubMenu "AUDIO"
@@ -187,7 +125,7 @@ do {
             switch ($sub.ToUpper()) {
                 "C" {
                     Show-Header
-                    Write-Host "  AUDIO CONVERSION" -ForegroundColor Magenta
+                    Write-Log "  AUDIO CONVERSION" "INFO" "Magenta"
                     Show-AudioFormats
                     $format = Read-Host "  Choose output format"
                     if ($format -ne "") {
@@ -197,26 +135,11 @@ do {
                 }
                 "O" {
                     Show-Header
-                    Write-Host "  AUDIO COMPRESSION" -ForegroundColor Magenta
-
-                    # First, select output format
-                    Show-AudioOutputFormats
-                    $outputFormat = Read-Host "  Choose output format (1-4)"
-                    if ($outputFormat -eq "") { $outputFormat = "1" }
-
-                    # Then, select compression level (skip for FLAC which is lossless)
-                    if ($outputFormat -eq "4") {
-                        Write-Host ""
-                        Write-Host "  FLAC is lossless - no compression level needed" -ForegroundColor DarkGray
-                        $level = "1"  # Dummy value, ignored for FLAC
-                    } else {
-                        $formatName = if ($outputFormat -eq "1") { "MP3" } elseif ($outputFormat -eq "2") { "AAC" } else { "OGG" }
-                        Show-AudioCompressionLevels -Format $formatName
-                        $level = Read-Host "  Choose compression level (1-4)"
-                    }
-
+                    Write-Log "  AUDIO COMPRESSION" "INFO" "Magenta"
+                    Show-AudioCompressionLevels
+                    $level = Read-Host "  Choose compression level (1-4)"
                     if ($level -ne "") {
-                        Compress-Audio -InputFolder "$inputBase\audio" -OutputFolder "$outputBase\audio" -Level $level -OutputFormat $outputFormat
+                        Compress-Audio -InputFolder "$inputBase\audio" -OutputFolder "$outputBase\audio" -Level $level
                     }
                     Pause-Script
                 }
@@ -224,11 +147,7 @@ do {
         }
         "3" {
             # VIDEO
-            if (-not (Get-Command "ffmpeg" -ErrorAction SilentlyContinue)) {
-                Write-Host "  [X] FFmpeg not installed." -ForegroundColor Red
-                Pause-Script
-                continue
-            }
+            if (-not (Test-Dependency "ffmpeg" "FFmpeg")) { Pause-Script; continue }
             
             Show-Header
             Show-SubMenu "VIDEO"
@@ -237,14 +156,10 @@ do {
             switch ($sub.ToUpper()) {
                 "C" {
                     Show-Header
-                    Write-Host "  VIDEO CONVERSION" -ForegroundColor Magenta
+                    Write-Log "  VIDEO CONVERSION" "INFO" "Magenta"
 
-                    # Check disk space before video conversion (require 2GB minimum)
                     if (-not (Test-DiskSpace -Path $outputBase -RequiredMB 2048)) {
-                        if (-not (Confirm-Action "Continue anyway?")) {
-                            Pause-Script
-                            break
-                        }
+                        if (-not (Confirm-Action "Continue anyway?")) { Pause-Script; break }
                     }
 
                     Show-VideoFormats
@@ -256,26 +171,19 @@ do {
                 }
                 "O" {
                     Show-Header
-                    Write-Host "  VIDEO COMPRESSION" -ForegroundColor Magenta
+                    Write-Log "  VIDEO COMPRESSION" "INFO" "Magenta"
 
-                    # Check disk space before video compression (require 2GB minimum)
                     if (-not (Test-DiskSpace -Path $outputBase -RequiredMB 2048)) {
-                        if (-not (Confirm-Action "Continue anyway?")) {
-                            Pause-Script
-                            break
-                        }
+                        if (-not (Confirm-Action "Continue anyway?")) { Pause-Script; break }
                     }
 
                     Show-VideoCompressionLevels
                     $level = Read-Host "  Choose compression level (1-4)"
 
-                    Write-Host ""
+                    Write-Log "" "" "White"
                     do {
                         $resize = Read-Host "  Downscale to 720p? (Y/N)"
                         $resizeUpper = $resize.ToUpper()
-                        if ($resizeUpper -ne "Y" -and $resizeUpper -ne "N" -and $resize -ne "") {
-                            Write-Host "  [X] Please enter Y or N" -ForegroundColor Red
-                        }
                     } while ($resizeUpper -ne "Y" -and $resizeUpper -ne "N" -and $resize -ne "")
 
                     $resize720 = ($resizeUpper -eq "Y")
@@ -289,13 +197,10 @@ do {
         }
         "4" {
             # DOCUMENTS
-            if (-not (Get-Command "pandoc" -ErrorAction SilentlyContinue)) {
-                Write-Host "  [X] Pandoc not installed." -ForegroundColor Red
-                Pause-Script
-                continue
-            }
+            if (-not (Test-Dependency "pandoc" "Pandoc")) { Pause-Script; continue }
+
             Show-Header
-            Write-Host "  DOCUMENT CONVERSION" -ForegroundColor Magenta
+            Write-Log "  DOCUMENT CONVERSION" "INFO" "Magenta"
             Show-DocumentFormats
             $format = Read-Host "  Choose output format"
             if ($format -ne "") {
@@ -303,20 +208,16 @@ do {
             }
             Pause-Script
         }
-        "5" {
-            Start-Process explorer.exe $inputBase
-        }
-        "6" {
-            Start-Process explorer.exe $outputBase
-        }
+        "5" { Start-Process explorer.exe $inputBase }
+        "6" { Start-Process explorer.exe $outputBase }
         "0" {
-            Write-Host ""
-            Write-Host "  Goodbye!" -ForegroundColor Cyan
-            Write-Host ""
+            Write-Log "" "" "Cyan"
+            Write-Log "  Goodbye!" "INFO" "Cyan"
+            Write-Log "" "" "Cyan"
             exit
         }
         default {
-            Write-Host "  [X] Invalid option" -ForegroundColor Red
+            Write-Log "  [X] Invalid option" "WARN" "Red"
             Start-Sleep -Seconds 1
         }
     }
