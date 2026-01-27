@@ -25,6 +25,39 @@ $outputBase = Join-Path $scriptPath "OUTPUT"
 . "$scriptPath\scripts\compress-audio.ps1"
 . "$scriptPath\scripts\compress-video.ps1"
 
+# Utility function to check available disk space
+function Test-DiskSpace {
+    param(
+        [string]$Path,
+        [long]$RequiredMB = 100
+    )
+    try {
+        $drive = (Get-Item $Path).PSDrive.Name
+        $driveInfo = Get-PSDrive -Name $drive
+        $freeSpaceMB = [math]::Round($driveInfo.Free / 1MB, 0)
+
+        if ($freeSpaceMB -lt $RequiredMB) {
+            Write-Host ""
+            Write-Host "  [WARNING] Low disk space: ${freeSpaceMB}MB available (need ${RequiredMB}MB)" -ForegroundColor Yellow
+            Write-Host "  Free up space before continuing to avoid conversion failures." -ForegroundColor Yellow
+            Write-Host ""
+            return $false
+        }
+        return $true
+    }
+    catch {
+        # If we can't check, assume it's OK
+        return $true
+    }
+}
+
+# Function to confirm before processing
+function Confirm-Action {
+    param([string]$Message)
+    $confirm = Read-Host "  $Message (Y/N)"
+    return ($confirm.ToUpper() -eq "Y")
+}
+
 function Show-Header {
     Clear-Host
     Write-Host ""
@@ -165,10 +198,25 @@ do {
                 "O" {
                     Show-Header
                     Write-Host "  AUDIO COMPRESSION" -ForegroundColor Magenta
-                    Show-AudioCompressionLevels
-                    $level = Read-Host "  Choose compression level (1-4)"
+
+                    # First, select output format
+                    Show-AudioOutputFormats
+                    $outputFormat = Read-Host "  Choose output format (1-4)"
+                    if ($outputFormat -eq "") { $outputFormat = "1" }
+
+                    # Then, select compression level (skip for FLAC which is lossless)
+                    if ($outputFormat -eq "4") {
+                        Write-Host ""
+                        Write-Host "  FLAC is lossless - no compression level needed" -ForegroundColor DarkGray
+                        $level = "1"  # Dummy value, ignored for FLAC
+                    } else {
+                        $formatName = if ($outputFormat -eq "1") { "MP3" } elseif ($outputFormat -eq "2") { "AAC" } else { "OGG" }
+                        Show-AudioCompressionLevels -Format $formatName
+                        $level = Read-Host "  Choose compression level (1-4)"
+                    }
+
                     if ($level -ne "") {
-                        Compress-Audio -InputFolder "$inputBase\audio" -OutputFolder "$outputBase\audio" -Level $level
+                        Compress-Audio -InputFolder "$inputBase\audio" -OutputFolder "$outputBase\audio" -Level $level -OutputFormat $outputFormat
                     }
                     Pause-Script
                 }
@@ -190,6 +238,15 @@ do {
                 "C" {
                     Show-Header
                     Write-Host "  VIDEO CONVERSION" -ForegroundColor Magenta
+
+                    # Check disk space before video conversion (require 2GB minimum)
+                    if (-not (Test-DiskSpace -Path $outputBase -RequiredMB 2048)) {
+                        if (-not (Confirm-Action "Continue anyway?")) {
+                            Pause-Script
+                            break
+                        }
+                    }
+
                     Show-VideoFormats
                     $format = Read-Host "  Choose output format"
                     if ($format -ne "") {
@@ -200,13 +257,29 @@ do {
                 "O" {
                     Show-Header
                     Write-Host "  VIDEO COMPRESSION" -ForegroundColor Magenta
+
+                    # Check disk space before video compression (require 2GB minimum)
+                    if (-not (Test-DiskSpace -Path $outputBase -RequiredMB 2048)) {
+                        if (-not (Confirm-Action "Continue anyway?")) {
+                            Pause-Script
+                            break
+                        }
+                    }
+
                     Show-VideoCompressionLevels
                     $level = Read-Host "  Choose compression level (1-4)"
-                    
+
                     Write-Host ""
-                    $resize = Read-Host "  Downscale to 720p? (Y/N)"
-                    $resize720 = ($resize.ToUpper() -eq "Y")
-                    
+                    do {
+                        $resize = Read-Host "  Downscale to 720p? (Y/N)"
+                        $resizeUpper = $resize.ToUpper()
+                        if ($resizeUpper -ne "Y" -and $resizeUpper -ne "N" -and $resize -ne "") {
+                            Write-Host "  [X] Please enter Y or N" -ForegroundColor Red
+                        }
+                    } while ($resizeUpper -ne "Y" -and $resizeUpper -ne "N" -and $resize -ne "")
+
+                    $resize720 = ($resizeUpper -eq "Y")
+
                     if ($level -ne "") {
                         Compress-Video -InputFolder "$inputBase\video" -OutputFolder "$outputBase\video" -Level $level -Resize720 $resize720
                     }

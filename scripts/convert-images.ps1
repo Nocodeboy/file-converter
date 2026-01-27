@@ -55,11 +55,18 @@ function Convert-Images {
         $outputName = [System.IO.Path]::GetFileNameWithoutExtension($archivo.Name) + "." + $formato.ext
         $outputPath = Join-Path $OutputFolder $outputName
 
+        # Check if output file already exists
+        if (Test-Path $outputPath) {
+            Write-Host "  $($archivo.Name) -> $outputName" -ForegroundColor Gray -NoNewline
+            Write-Host " [SKIPPED: file exists]" -ForegroundColor Yellow
+            continue
+        }
+
         Write-Host "  $($archivo.Name) -> $outputName" -ForegroundColor Gray -NoNewline
 
         try {
             $params = @($archivo.FullName, $outputPath)
-            
+
             if ($formato.ext -eq "jpg") {
                 $params = @($archivo.FullName, "-quality", "90", $outputPath)
             }
@@ -70,18 +77,19 @@ function Convert-Images {
                 $params = @($archivo.FullName, "-resize", "256x256", $outputPath)
             }
 
-            & magick @params 2>&1 | Out-Null
+            $magickOutput = & magick @params 2>&1
 
             if ($LASTEXITCODE -eq 0 -and (Test-Path $outputPath)) {
                 Write-Host " [OK]" -ForegroundColor Green
                 $converted++
             }
             else {
-                Write-Host " [ERROR]" -ForegroundColor Red
+                $errorMsg = if ($magickOutput) { $magickOutput | Select-Object -First 1 } else { "ImageMagick conversion failed" }
+                Write-Host " [ERROR: $errorMsg]" -ForegroundColor Red
             }
         }
         catch {
-            Write-Host " [ERROR] $_" -ForegroundColor Red
+            Write-Host " [ERROR: $($_.Exception.Message)]" -ForegroundColor Red
         }
     }
 
