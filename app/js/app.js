@@ -13,6 +13,7 @@ const state = {
     convertedFiles: [],
     ffmpeg: null,
     ffmpegLoaded: false,
+    ffmpegFailed: false,
     isConverting: false
 };
 
@@ -85,41 +86,95 @@ function replaceExtension(filename, newExt) {
 // FFmpeg Loading (Lazy)
 // ========================================
 
+async function checkCrossOriginIsolated() {
+    // Check if we have the required isolation for SharedArrayBuffer
+    if (typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated) {
+        return true;
+    }
+    // Give the coi-serviceworker time to activate
+    await new Promise(resolve => setTimeout(resolve, 100));
+    return typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated;
+}
+
 async function loadFFmpeg() {
     if (state.ffmpegLoaded) return true;
+    if (state.ffmpegFailed) return false;
 
     try {
-        showLoading('Loading FFmpeg...');
+        showLoading('Checking browser compatibility...');
 
-        // Import FFmpeg from CDN
-        const { FFmpeg } = await import('https://unpkg.com/@ffmpeg/ffmpeg@0.12.7/dist/esm/index.js');
-        const { fetchFile, toBlobURL } = await import('https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js');
+        // Check for SharedArrayBuffer support
+        const isIsolated = await checkCrossOriginIsolated();
+        if (!isIsolated) {
+            console.warn('crossOriginIsolated is false, FFmpeg may not work');
+            updateLoading('Enabling advanced features...');
+            // Wait a bit more for service worker
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        updateLoading('Loading FFmpeg library...');
+
+        // Import FFmpeg from CDN with timeout
+        const importPromise = Promise.all([
+            import('https://unpkg.com/@ffmpeg/ffmpeg@0.12.7/dist/esm/index.js'),
+            import('https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js')
+        ]);
+
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout loading FFmpeg')), 30000)
+        );
+
+        const [{ FFmpeg }, { fetchFile, toBlobURL }] = await Promise.race([importPromise, timeoutPromise]);
 
         state.ffmpeg = new FFmpeg();
-
-        // Store fetchFile for later use
         state.fetchFile = fetchFile;
 
         state.ffmpeg.on('progress', ({ progress }) => {
             updateProgress(Math.round(progress * 100), 'Processing...');
         });
 
-        updateLoading('Loading FFmpeg core...');
+        state.ffmpeg.on('log', ({ message }) => {
+            console.log('[FFmpeg]', message);
+        });
+
+        updateLoading('Loading FFmpeg core (this may take a moment)...');
 
         const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
-        await state.ffmpeg.load({
+
+        const coreLoadPromise = state.ffmpeg.load({
             coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
             wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
         });
 
+        const coreTimeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout loading FFmpeg core')), 60000)
+        );
+
+        await Promise.race([coreLoadPromise, coreTimeoutPromise]);
+
         state.ffmpegLoaded = true;
         hideLoading();
+        console.log('FFmpeg loaded successfully');
         return true;
 
     } catch (error) {
         console.error('Failed to load FFmpeg:', error);
+        state.ffmpegFailed = true;
         hideLoading();
-        alert('Failed to load FFmpeg. Audio/Video conversion may not work. Error: ' + error.message);
+
+        let message = 'Failed to load FFmpeg for audio/video conversion.\n\n';
+        if (error.message.includes('SharedArrayBuffer')) {
+            message += 'Your browser does not support the required features.\n';
+            message += 'Try using Chrome, Edge, or Firefox.\n\n';
+            message += 'Image conversion still works!';
+        } else if (error.message.includes('Timeout')) {
+            message += 'The download timed out. Please check your internet connection and try again.';
+        } else {
+            message += 'Error: ' + error.message + '\n\n';
+            message += 'Image conversion still works!';
+        }
+
+        alert(message);
         return false;
     }
 }

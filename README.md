@@ -134,36 +134,26 @@ The tool features a clean, colorful terminal interface with an easy-to-navigate 
 
 ```
 file-converter/
-├── INPUT/                      # Source files
-│   ├── images/
-│   ├── audio/
-│   ├── video/
-│   └── documents/
-├── OUTPUT/                     # Converted files
-│   ├── images/
-│   ├── audio/
-│   ├── video/
-│   └── documents/
-├── scripts/                    # Conversion modules
-│   ├── utils.ps1               # Shared utilities & logging
-│   ├── convert-images.ps1
-│   ├── convert-audio.ps1
-│   ├── convert-video.ps1
-│   ├── convert-documents.ps1
-│   ├── compress-images.ps1
-│   ├── compress-audio.ps1
-│   └── compress-video.ps1
+├── app/                        # Web App (PWA)
+│   ├── index.html              # Main app UI
+│   ├── manifest.json           # PWA manifest
+│   ├── sw.js                   # Service Worker
+│   ├── coi-serviceworker.js    # COOP/COEP headers
+│   ├── css/app.css             # Styles
+│   └── js/app.js               # Application logic
 ├── assets/                     # Visual assets
 │   ├── logo.svg                # Project logo
 │   └── favicon.svg             # Favicon
+├── scripts/                    # CLI conversion modules
+│   ├── utils.ps1               # Shared utilities & logging
+│   ├── convert-*.ps1           # Conversion scripts
+│   └── compress-*.ps1          # Compression scripts
+├── INPUT/                      # Source files (CLI)
+├── OUTPUT/                     # Converted files (CLI)
 ├── index.html                  # Landing page
-├── CONVERT.bat                 # Main entry point
-├── CONVERT.ps1                 # Main script
-├── install-dependencies.ps1    # Dependency installer
-├── README.md
-├── CONTRIBUTING.md
-├── LICENSE
-└── CHANGELOG.md
+├── CONVERT.bat                 # CLI entry point (Windows)
+├── CONVERT.ps1                 # CLI main script
+└── install-dependencies.ps1    # Dependency installer
 ```
 
 ## 🛠️ Dependencies
