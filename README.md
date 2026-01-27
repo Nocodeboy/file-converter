@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" alt="File Converter Logo" width="120">
+  <img src="assets/logo.svg" alt="File Converter Logo" width="120">
 </p>
 
 <h1 align="center">File Converter</h1>
@@ -38,9 +38,9 @@
 
 ## 📸 Screenshots
 
-<p align="center">
-  <img src="assets/screenshot-menu.png" alt="Main Menu" width="600">
-</p>
+> **[View the interactive demo on our landing page](index.html)**
+
+The tool features a clean, colorful terminal interface with an easy-to-navigate menu system.
 
 ## 📦 Installation
 
@@ -137,6 +137,7 @@ file-converter/
 │   ├── video/
 │   └── documents/
 ├── scripts/                    # Conversion modules
+│   ├── utils.ps1               # Shared utilities & logging
 │   ├── convert-images.ps1
 │   ├── convert-audio.ps1
 │   ├── convert-video.ps1
@@ -144,7 +145,10 @@ file-converter/
 │   ├── compress-images.ps1
 │   ├── compress-audio.ps1
 │   └── compress-video.ps1
-├── assets/                     # Documentation assets
+├── assets/                     # Visual assets
+│   ├── logo.svg                # Project logo
+│   └── favicon.svg             # Favicon
+├── index.html                  # Landing page
 ├── CONVERT.bat                 # Main entry point
 ├── CONVERT.ps1                 # Main script
 ├── install-dependencies.ps1    # Dependency installer
