@@ -3,15 +3,20 @@
  * Enables offline functionality and caching
  */
 
-const CACHE_NAME = 'file-converter-v1';
+const CACHE_NAME = 'file-converter-v2';
+
+// Get the base path dynamically (works with GitHub Pages subdirectories)
+const BASE_PATH = self.registration.scope;
+
+// Assets to cache (relative to service worker location)
 const STATIC_ASSETS = [
-    '/app/',
-    '/app/index.html',
-    '/app/css/app.css',
-    '/app/js/app.js',
-    '/app/manifest.json',
-    '/assets/favicon.svg',
-    '/assets/logo.svg'
+    './',
+    './index.html',
+    './css/app.css',
+    './js/app.js',
+    './manifest.json',
+    '../assets/favicon.svg',
+    '../assets/logo.svg'
 ];
 
 // External resources to cache
@@ -26,9 +31,14 @@ self.addEventListener('install', (event) => {
         caches.open(CACHE_NAME)
             .then((cache) => {
                 console.log('[SW] Caching static assets');
-                return cache.addAll(STATIC_ASSETS);
+                // Cache assets with relative URLs resolved to absolute
+                const urlsToCache = STATIC_ASSETS.map(asset => new URL(asset, self.location.href).href);
+                return cache.addAll(urlsToCache);
             })
             .then(() => self.skipWaiting())
+            .catch(err => {
+                console.log('[SW] Cache failed:', err);
+            })
     );
 });
 
@@ -40,7 +50,7 @@ self.addEventListener('activate', (event) => {
             .then((cacheNames) => {
                 return Promise.all(
                     cacheNames
-                        .filter((name) => name !== CACHE_NAME)
+                        .filter((name) => name.startsWith('file-converter-') && name !== CACHE_NAME)
                         .map((name) => {
                             console.log('[SW] Deleting old cache:', name);
                             return caches.delete(name);
@@ -64,24 +74,26 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+    // Skip chrome-extension and other non-http(s) requests
+    if (!url.protocol.startsWith('http')) {
+        return;
+    }
+
     event.respondWith(
         caches.match(request)
             .then((cachedResponse) => {
                 if (cachedResponse) {
-                    // Return cached version
                     return cachedResponse;
                 }
 
-                // Fetch from network
                 return fetch(request)
                     .then((networkResponse) => {
-                        // Don't cache non-successful responses
                         if (!networkResponse || networkResponse.status !== 200) {
                             return networkResponse;
                         }
 
-                        // Cache successful responses for static assets
-                        if (url.origin === self.location.origin || EXTERNAL_ASSETS.some(a => url.href.startsWith(a))) {
+                        // Cache successful responses for same-origin assets
+                        if (url.origin === self.location.origin) {
                             const responseToCache = networkResponse.clone();
                             caches.open(CACHE_NAME)
                                 .then((cache) => {
@@ -94,7 +106,7 @@ self.addEventListener('fetch', (event) => {
                     .catch(() => {
                         // Offline fallback for navigation requests
                         if (request.mode === 'navigate') {
-                            return caches.match('/app/index.html');
+                            return caches.match(new URL('./index.html', self.location.href).href);
                         }
                         return new Response('Offline', { status: 503 });
                     });
