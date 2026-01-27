@@ -53,19 +53,32 @@ function Convert-Video {
     $converted = 0
     foreach ($archivo in $archivos) {
         $outputName = [System.IO.Path]::GetFileNameWithoutExtension($archivo.Name) + "." + $formato.ext
-        
+
         if ($formato.ext -eq "mp3") {
-            $outputPath = Join-Path (Split-Path $OutputFolder -Parent) "audio" $outputName
+            # Audio extraction goes to OUTPUT/audio/ - ensure folder exists
+            $audioFolder = Join-Path (Split-Path $OutputFolder -Parent) "audio"
+            if (-not (Test-Path $audioFolder)) {
+                New-Item -ItemType Directory -Path $audioFolder -Force | Out-Null
+                Write-Host "  Created OUTPUT/audio/ folder" -ForegroundColor DarkGray
+            }
+            $outputPath = Join-Path $audioFolder $outputName
         }
         else {
             $outputPath = Join-Path $OutputFolder $outputName
+        }
+
+        # Check if output file already exists
+        if (Test-Path $outputPath) {
+            Write-Host "  $($archivo.Name) -> $outputName" -ForegroundColor Gray -NoNewline
+            Write-Host " [SKIPPED: file exists]" -ForegroundColor Yellow
+            continue
         }
 
         Write-Host "  $($archivo.Name) -> $outputName" -ForegroundColor Gray -NoNewline
 
         try {
             $params = @("-i", $archivo.FullName, "-y") + $formato.params + @($outputPath)
-            
+
             & ffmpeg @params 2>&1 | Out-Null
 
             if ($LASTEXITCODE -eq 0 -and (Test-Path $outputPath)) {
@@ -73,11 +86,11 @@ function Convert-Video {
                 $converted++
             }
             else {
-                Write-Host " [ERROR]" -ForegroundColor Red
+                Write-Host " [ERROR: FFmpeg conversion failed]" -ForegroundColor Red
             }
         }
         catch {
-            Write-Host " [ERROR] $_" -ForegroundColor Red
+            Write-Host " [ERROR: $($_.Exception.Message)]" -ForegroundColor Red
         }
     }
 
