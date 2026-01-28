@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-01-28
+
+### Fixed
+- **Critical**: Fixed FFmpeg input filename bug (missing dot before extension)
+- **Security**: Added XSS protection by escaping file names in HTML output
+- **UX**: Format selector now filters options based on uploaded file types
+- **Reliability**: Improved coi-serviceworker with better error handling and logging
+- **Performance**: Added loading state to prevent duplicate FFmpeg loads
+- **Compatibility**: Better SharedArrayBuffer detection with fallback checks
+
+### Improved
+- Enhanced error messages with actionable troubleshooting steps
+- Added timeout handling for FFmpeg downloads (30s library, 120s core)
+- JPEG conversion now adds white background (handles transparency properly)
+- GIF conversion uses palette optimization for better quality
+- MP4 output includes faststart flag for web streaming
+- Results now show file size savings percentage
+
+### Technical
+- Refactored app.js with proper JSDoc documentation
+- Added `'use strict'` mode for better error catching
+- Improved memory management with URL.revokeObjectURL cleanup
+- Added aria-labels for accessibility
+
 ## [2.0.0] - 2026-01-27
 
 ### Added

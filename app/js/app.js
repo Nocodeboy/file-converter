@@ -2,7 +2,12 @@
  * File Converter PWA
  * Browser-based file conversion using WebAssembly
  * Files never leave your device
+ *
+ * @version 2.0.0
+ * @license MIT
  */
+
+'use strict';
 
 // ========================================
 // State
@@ -14,6 +19,7 @@ const state = {
     ffmpeg: null,
     ffmpegLoaded: false,
     ffmpegFailed: false,
+    ffmpegLoading: false,
     isConverting: false
 };
 
@@ -46,9 +52,53 @@ const elements = {
 };
 
 // ========================================
+// Constants
+// ========================================
+
+const FORMAT_CONFIG = {
+    image: {
+        formats: ['png', 'jpeg', 'webp', 'gif'],
+        label: 'Images'
+    },
+    audio: {
+        formats: ['mp3', 'wav', 'ogg'],
+        label: 'Audio'
+    },
+    video: {
+        formats: ['mp4', 'webm', 'gif-video'],
+        label: 'Video'
+    }
+};
+
+const FORMAT_LABELS = {
+    png: 'PNG',
+    jpeg: 'JPEG',
+    webp: 'WebP',
+    gif: 'GIF',
+    mp3: 'MP3',
+    wav: 'WAV',
+    ogg: 'OGG',
+    mp4: 'MP4',
+    webm: 'WebM',
+    'gif-video': 'GIF (animated)'
+};
+
+// ========================================
 // Utilities
 // ========================================
 
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/**
+ * Format file size to human readable
+ */
 function formatFileSize(bytes) {
     if (bytes === 0) return '0 B';
     const k = 1024;
@@ -57,6 +107,9 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
+/**
+ * Get file type from MIME type
+ */
 function getFileType(file) {
     if (file.type.startsWith('image/')) return 'image';
     if (file.type.startsWith('audio/')) return 'audio';
@@ -64,125 +117,216 @@ function getFileType(file) {
     return 'unknown';
 }
 
+/**
+ * Get icon for file type
+ */
 function getFileIcon(type) {
-    switch (type) {
-        case 'image': return '🖼️';
-        case 'audio': return '🎵';
-        case 'video': return '🎬';
-        default: return '📄';
-    }
+    const icons = {
+        image: '🖼️',
+        audio: '🎵',
+        video: '🎬',
+        unknown: '📄'
+    };
+    return icons[type] || icons.unknown;
 }
 
+/**
+ * Get file extension
+ */
 function getFileExtension(filename) {
-    return filename.split('.').pop().toLowerCase();
+    const parts = filename.split('.');
+    return parts.length > 1 ? parts.pop().toLowerCase() : '';
 }
 
+/**
+ * Replace file extension
+ */
 function replaceExtension(filename, newExt) {
-    const base = filename.substring(0, filename.lastIndexOf('.'));
+    const lastDot = filename.lastIndexOf('.');
+    const base = lastDot > 0 ? filename.substring(0, lastDot) : filename;
     return `${base}.${newExt}`;
 }
 
-// ========================================
-// FFmpeg Loading (Lazy)
-// ========================================
-
-async function checkCrossOriginIsolated() {
-    // Check if we have the required isolation for SharedArrayBuffer
-    if (typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated) {
-        return true;
-    }
-    // Give the coi-serviceworker time to activate
-    await new Promise(resolve => setTimeout(resolve, 100));
-    return typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated;
+/**
+ * Sleep utility
+ */
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// ========================================
+// FFmpeg Loading
+// ========================================
+
+/**
+ * Check if SharedArrayBuffer is available
+ */
+function checkSharedArrayBuffer() {
+    try {
+        new SharedArrayBuffer(1);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+/**
+ * Check cross-origin isolation status
+ */
+async function checkCrossOriginIsolated() {
+    // Direct check
+    if (window.crossOriginIsolated === true) {
+        return true;
+    }
+
+    // Check SharedArrayBuffer availability
+    if (checkSharedArrayBuffer()) {
+        return true;
+    }
+
+    // Wait for service worker to activate
+    await sleep(500);
+
+    return window.crossOriginIsolated === true || checkSharedArrayBuffer();
+}
+
+/**
+ * Load FFmpeg with proper error handling
+ */
 async function loadFFmpeg() {
     if (state.ffmpegLoaded) return true;
     if (state.ffmpegFailed) return false;
+    if (state.ffmpegLoading) return false;
+
+    state.ffmpegLoading = true;
 
     try {
         showLoading('Checking browser compatibility...');
 
-        // Check for SharedArrayBuffer support
         const isIsolated = await checkCrossOriginIsolated();
+
         if (!isIsolated) {
-            console.warn('crossOriginIsolated is false, FFmpeg may not work');
-            updateLoading('Enabling advanced features...');
-            // Wait a bit more for service worker
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Try waiting longer for the service worker
+            updateLoading('Enabling secure context...');
+            await sleep(1000);
+
+            if (!checkSharedArrayBuffer()) {
+                throw new Error('SharedArrayBuffer is not available. Please reload the page.');
+            }
         }
 
         updateLoading('Loading FFmpeg library...');
 
-        // Import FFmpeg from CDN with timeout
-        const importPromise = Promise.all([
+        // Dynamic import with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+        const [ffmpegModule, utilModule] = await Promise.all([
             import('https://unpkg.com/@ffmpeg/ffmpeg@0.12.7/dist/esm/index.js'),
             import('https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js')
         ]);
 
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout loading FFmpeg')), 30000)
-        );
+        clearTimeout(timeoutId);
 
-        const [{ FFmpeg }, { fetchFile, toBlobURL }] = await Promise.race([importPromise, timeoutPromise]);
+        const { FFmpeg } = ffmpegModule;
+        const { fetchFile, toBlobURL } = utilModule;
 
         state.ffmpeg = new FFmpeg();
         state.fetchFile = fetchFile;
 
+        // Progress handler
         state.ffmpeg.on('progress', ({ progress }) => {
-            updateProgress(Math.round(progress * 100), 'Processing...');
+            const percent = Math.min(Math.round(progress * 100), 100);
+            updateProgress(percent, `Processing... ${percent}%`);
         });
 
+        // Log handler for debugging
         state.ffmpeg.on('log', ({ message }) => {
-            console.log('[FFmpeg]', message);
+            console.debug('[FFmpeg]', message);
         });
 
-        updateLoading('Loading FFmpeg core (this may take a moment)...');
+        updateLoading('Downloading FFmpeg core (~30MB)...');
 
         const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
 
-        const coreLoadPromise = state.ffmpeg.load({
+        // Load with timeout
+        const loadPromise = state.ffmpeg.load({
             coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
             wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
         });
 
-        const coreTimeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout loading FFmpeg core')), 60000)
+        const loadTimeout = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('FFmpeg load timeout')), 120000)
         );
 
-        await Promise.race([coreLoadPromise, coreTimeoutPromise]);
+        await Promise.race([loadPromise, loadTimeout]);
 
         state.ffmpegLoaded = true;
+        state.ffmpegLoading = false;
         hideLoading();
+
         console.log('FFmpeg loaded successfully');
         return true;
 
     } catch (error) {
-        console.error('Failed to load FFmpeg:', error);
+        console.error('FFmpeg load error:', error);
         state.ffmpegFailed = true;
+        state.ffmpegLoading = false;
         hideLoading();
 
-        let message = 'Failed to load FFmpeg for audio/video conversion.\n\n';
-        if (error.message.includes('SharedArrayBuffer')) {
-            message += 'Your browser does not support the required features.\n';
-            message += 'Try using Chrome, Edge, or Firefox.\n\n';
-            message += 'Image conversion still works!';
-        } else if (error.message.includes('Timeout')) {
-            message += 'The download timed out. Please check your internet connection and try again.';
-        } else {
-            message += 'Error: ' + error.message + '\n\n';
-            message += 'Image conversion still works!';
-        }
+        const errorMessage = getFFmpegErrorMessage(error);
+        showError(errorMessage);
 
-        alert(message);
         return false;
     }
+}
+
+/**
+ * Get user-friendly error message for FFmpeg errors
+ */
+function getFFmpegErrorMessage(error) {
+    const msg = error.message || String(error);
+
+    if (msg.includes('SharedArrayBuffer')) {
+        return 'Your browser cannot run FFmpeg.\n\n' +
+               'This usually happens when:\n' +
+               '• The page was not loaded securely\n' +
+               '• Your browser blocks this feature\n\n' +
+               'Try:\n' +
+               '1. Reload the page\n' +
+               '2. Use Chrome, Edge, or Firefox\n' +
+               '3. Make sure you\'re using HTTPS\n\n' +
+               'Image conversion still works!';
+    }
+
+    if (msg.includes('timeout') || msg.includes('Timeout')) {
+        return 'FFmpeg download timed out.\n\n' +
+               'The FFmpeg library is about 30MB.\n' +
+               'Please check your internet connection and try again.';
+    }
+
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+        return 'Could not download FFmpeg.\n\n' +
+               'Please check your internet connection and try again.';
+    }
+
+    return `FFmpeg error: ${msg}\n\nImage conversion still works!`;
+}
+
+/**
+ * Show error dialog
+ */
+function showError(message) {
+    alert(message);
 }
 
 // ========================================
 // Image Conversion (Canvas API)
 // ========================================
 
+/**
+ * Convert image using Canvas API
+ */
 async function convertImage(file, format, quality) {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -190,33 +334,45 @@ async function convertImage(file, format, quality) {
 
         reader.onload = (e) => {
             img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth || img.width;
+                    canvas.height = img.naturalHeight || img.height;
 
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
+                    const ctx = canvas.getContext('2d');
 
-                let mimeType;
-                switch (format) {
-                    case 'png': mimeType = 'image/png'; break;
-                    case 'jpeg': mimeType = 'image/jpeg'; break;
-                    case 'webp': mimeType = 'image/webp'; break;
-                    case 'gif': mimeType = 'image/gif'; break;
-                    default: mimeType = 'image/png';
+                    // White background for JPEG (no transparency)
+                    if (format === 'jpeg') {
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    }
+
+                    ctx.drawImage(img, 0, 0);
+
+                    const mimeTypes = {
+                        png: 'image/png',
+                        jpeg: 'image/jpeg',
+                        webp: 'image/webp',
+                        gif: 'image/gif'
+                    };
+
+                    const mimeType = mimeTypes[format] || 'image/png';
+                    const qualityValue = format === 'png' ? undefined : quality / 100;
+
+                    canvas.toBlob(
+                        (blob) => {
+                            if (blob) {
+                                resolve(blob);
+                            } else {
+                                reject(new Error('Canvas conversion failed'));
+                            }
+                        },
+                        mimeType,
+                        qualityValue
+                    );
+                } catch (err) {
+                    reject(err);
                 }
-
-                canvas.toBlob(
-                    (blob) => {
-                        if (blob) {
-                            resolve(blob);
-                        } else {
-                            reject(new Error('Failed to convert image'));
-                        }
-                    },
-                    mimeType,
-                    quality / 100
-                );
             };
 
             img.onerror = () => reject(new Error('Failed to load image'));
@@ -232,6 +388,9 @@ async function convertImage(file, format, quality) {
 // Audio/Video Conversion (FFmpeg)
 // ========================================
 
+/**
+ * Convert media file using FFmpeg
+ */
 async function convertMedia(file, format) {
     if (!state.ffmpegLoaded) {
         const loaded = await loadFFmpeg();
@@ -239,87 +398,101 @@ async function convertMedia(file, format) {
     }
 
     const ffmpeg = state.ffmpeg;
-    const inputName = 'input' + getFileExtension(file.name);
-    const outputName = `output.${format === 'gif-video' ? 'gif' : format}`;
+    const ext = getFileExtension(file.name) || 'tmp';
+    const inputName = `input.${ext}`;
+    const outputExt = format === 'gif-video' ? 'gif' : format;
+    const outputName = `output.${outputExt}`;
 
-    // Write input file
-    await ffmpeg.writeFile(inputName, await state.fetchFile(file));
+    try {
+        // Write input file
+        const fileData = await state.fetchFile(file);
+        await ffmpeg.writeFile(inputName, fileData);
 
-    // Build FFmpeg command based on format
-    let args;
-    switch (format) {
-        case 'mp3':
-            args = ['-i', inputName, '-vn', '-acodec', 'libmp3lame', '-q:a', '2', outputName];
-            break;
-        case 'wav':
-            args = ['-i', inputName, '-vn', '-acodec', 'pcm_s16le', outputName];
-            break;
-        case 'ogg':
-            args = ['-i', inputName, '-vn', '-acodec', 'libvorbis', '-q:a', '5', outputName];
-            break;
-        case 'mp4':
-            args = ['-i', inputName, '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-c:a', 'aac', outputName];
-            break;
-        case 'webm':
-            args = ['-i', inputName, '-c:v', 'libvpx-vp9', '-crf', '30', '-b:v', '0', '-c:a', 'libopus', outputName];
-            break;
-        case 'gif-video':
-            args = ['-i', inputName, '-vf', 'fps=10,scale=480:-1:flags=lanczos', '-loop', '0', outputName];
-            break;
-        default:
-            throw new Error('Unsupported format: ' + format);
+        // Build FFmpeg arguments
+        const args = getFFmpegArgs(inputName, outputName, format);
+
+        // Execute conversion
+        await ffmpeg.exec(args);
+
+        // Read output file
+        const data = await ffmpeg.readFile(outputName);
+
+        // Cleanup
+        try {
+            await ffmpeg.deleteFile(inputName);
+            await ffmpeg.deleteFile(outputName);
+        } catch (e) {
+            console.warn('Cleanup error:', e);
+        }
+
+        // Return blob
+        const mimeTypes = {
+            mp3: 'audio/mpeg',
+            wav: 'audio/wav',
+            ogg: 'audio/ogg',
+            mp4: 'video/mp4',
+            webm: 'video/webm',
+            'gif-video': 'image/gif'
+        };
+
+        return new Blob([data.buffer], {
+            type: mimeTypes[format] || 'application/octet-stream'
+        });
+
+    } catch (error) {
+        // Cleanup on error
+        try {
+            await ffmpeg.deleteFile(inputName);
+        } catch (e) {}
+
+        throw error;
     }
+}
 
-    await ffmpeg.exec(args);
+/**
+ * Get FFmpeg arguments for conversion
+ */
+function getFFmpegArgs(input, output, format) {
+    const args = {
+        mp3: ['-i', input, '-vn', '-acodec', 'libmp3lame', '-q:a', '2', output],
+        wav: ['-i', input, '-vn', '-acodec', 'pcm_s16le', output],
+        ogg: ['-i', input, '-vn', '-acodec', 'libvorbis', '-q:a', '5', output],
+        mp4: ['-i', input, '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-c:a', 'aac', '-movflags', '+faststart', output],
+        webm: ['-i', input, '-c:v', 'libvpx-vp9', '-crf', '30', '-b:v', '0', '-c:a', 'libopus', output],
+        'gif-video': ['-i', input, '-vf', 'fps=10,scale=480:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse', '-loop', '0', output]
+    };
 
-    // Read output file
-    const data = await ffmpeg.readFile(outputName);
-
-    // Cleanup
-    await ffmpeg.deleteFile(inputName);
-    await ffmpeg.deleteFile(outputName);
-
-    // Determine mime type
-    let mimeType;
-    switch (format) {
-        case 'mp3': mimeType = 'audio/mpeg'; break;
-        case 'wav': mimeType = 'audio/wav'; break;
-        case 'ogg': mimeType = 'audio/ogg'; break;
-        case 'mp4': mimeType = 'video/mp4'; break;
-        case 'webm': mimeType = 'video/webm'; break;
-        case 'gif-video': mimeType = 'image/gif'; break;
-        default: mimeType = 'application/octet-stream';
-    }
-
-    return new Blob([data.buffer], { type: mimeType });
+    return args[format] || ['-i', input, output];
 }
 
 // ========================================
 // Conversion Handler
 // ========================================
 
+/**
+ * Main conversion function
+ */
 async function convertFiles() {
     if (state.isConverting || state.files.length === 0) return;
+
+    const format = elements.outputFormat.value;
+    const quality = parseInt(elements.quality.value, 10);
+    const isMediaFormat = ['mp3', 'wav', 'ogg', 'mp4', 'webm', 'gif-video'].includes(format);
+
+    // Pre-load FFmpeg if needed
+    if (isMediaFormat) {
+        const loaded = await loadFFmpeg();
+        if (!loaded) return;
+    }
 
     state.isConverting = true;
     state.convertedFiles = [];
 
-    const format = elements.outputFormat.value;
-    const quality = parseInt(elements.quality.value);
-    const isAudioVideo = ['mp3', 'wav', 'ogg', 'mp4', 'webm', 'gif-video'].includes(format);
-
-    // Pre-load FFmpeg if needed
-    if (isAudioVideo) {
-        const loaded = await loadFFmpeg();
-        if (!loaded) {
-            state.isConverting = false;
-            return;
-        }
-    }
-
     elements.progressContainer.hidden = false;
     elements.convertBtn.disabled = true;
     elements.results.hidden = true;
+
+    const errors = [];
 
     for (let i = 0; i < state.files.length; i++) {
         const file = state.files[i];
@@ -327,46 +500,52 @@ async function convertFiles() {
 
         updateProgress(
             Math.round((i / state.files.length) * 100),
-            `Converting ${i + 1} of ${state.files.length}: ${file.name}`
+            `Converting ${i + 1}/${state.files.length}: ${escapeHtml(file.name)}`
         );
 
         try {
             let blob;
-            const actualFormat = format === 'gif-video' ? 'gif' : format;
+            const outputExt = format === 'gif-video' ? 'gif' : format;
 
-            if (fileType === 'image' && ['png', 'jpeg', 'webp', 'gif'].includes(format)) {
+            if (fileType === 'image' && FORMAT_CONFIG.image.formats.includes(format)) {
                 blob = await convertImage(file, format, quality);
-            } else if (isAudioVideo) {
+            } else if (isMediaFormat && (fileType === 'audio' || fileType === 'video')) {
                 blob = await convertMedia(file, format);
             } else {
-                console.warn(`Cannot convert ${fileType} to ${format}`);
+                errors.push(`${file.name}: Incompatible format`);
                 continue;
             }
 
-            const newName = replaceExtension(file.name, actualFormat);
             state.convertedFiles.push({
-                name: newName,
+                name: replaceExtension(file.name, outputExt),
                 blob: blob,
-                size: blob.size
+                size: blob.size,
+                originalSize: file.size
             });
 
         } catch (error) {
             console.error(`Error converting ${file.name}:`, error);
+            errors.push(`${file.name}: ${error.message}`);
         }
     }
 
     updateProgress(100, 'Done!');
 
-    setTimeout(() => {
-        elements.progressContainer.hidden = true;
-        elements.convertBtn.disabled = false;
-        state.isConverting = false;
-        showResults();
-    }, 500);
+    await sleep(300);
+
+    elements.progressContainer.hidden = true;
+    elements.convertBtn.disabled = false;
+    state.isConverting = false;
+
+    if (errors.length > 0) {
+        console.warn('Conversion errors:', errors);
+    }
+
+    showResults();
 }
 
 // ========================================
-// UI Updates
+// UI Functions
 // ========================================
 
 function updateProgress(percent, text) {
@@ -387,17 +566,23 @@ function hideLoading() {
     elements.loadingOverlay.hidden = true;
 }
 
+/**
+ * Render file list with proper escaping
+ */
 function renderFileList() {
     elements.fileList.innerHTML = state.files.map((file, index) => {
         const type = getFileType(file);
+        const name = escapeHtml(file.name);
+        const size = formatFileSize(file.size);
+
         return `
             <div class="file-item" data-index="${index}">
                 <div class="file-icon ${type}">${getFileIcon(type)}</div>
                 <div class="file-info">
-                    <div class="file-name">${file.name}</div>
-                    <div class="file-size">${formatFileSize(file.size)}</div>
+                    <div class="file-name" title="${name}">${name}</div>
+                    <div class="file-size">${size}</div>
                 </div>
-                <button class="file-remove" data-index="${index}">
+                <button class="file-remove" data-index="${index}" aria-label="Remove file">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M18 6L6 18M6 6l12 12"/>
                     </svg>
@@ -410,11 +595,54 @@ function renderFileList() {
     elements.fileList.querySelectorAll('.file-remove').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            const index = parseInt(btn.dataset.index);
+            const index = parseInt(btn.dataset.index, 10);
             state.files.splice(index, 1);
             updateUI();
         });
     });
+}
+
+/**
+ * Update format selector based on file types
+ */
+function updateFormatSelector() {
+    const types = new Set(state.files.map(f => getFileType(f)));
+    const select = elements.outputFormat;
+
+    // Build new options
+    let html = '';
+
+    for (const [type, config] of Object.entries(FORMAT_CONFIG)) {
+        if (types.has(type)) {
+            html += `<optgroup label="${config.label}">`;
+            for (const format of config.formats) {
+                html += `<option value="${format}">${FORMAT_LABELS[format]}</option>`;
+            }
+            html += '</optgroup>';
+        }
+    }
+
+    // Update if changed
+    if (select.innerHTML !== html) {
+        const previousValue = select.value;
+        select.innerHTML = html;
+
+        // Try to restore previous selection
+        if ([...select.options].some(o => o.value === previousValue)) {
+            select.value = previousValue;
+        }
+    }
+
+    updateFormatOptions();
+}
+
+/**
+ * Update quality slider visibility
+ */
+function updateFormatOptions() {
+    const format = elements.outputFormat.value;
+    const imageFormats = FORMAT_CONFIG.image.formats;
+    elements.qualityGroup.hidden = !imageFormats.includes(format);
 }
 
 function updateUI() {
@@ -425,50 +653,59 @@ function updateUI() {
 
     if (hasFiles) {
         renderFileList();
-        updateFormatOptions();
+        updateFormatSelector();
     }
 }
 
-function updateFormatOptions() {
-    // Determine what type of files we have
-    const types = new Set(state.files.map(f => getFileType(f)));
-    const format = elements.outputFormat.value;
-
-    // Show/hide quality slider based on format
-    const imageFormats = ['png', 'jpeg', 'webp', 'gif'];
-    elements.qualityGroup.hidden = !imageFormats.includes(format);
-}
-
+/**
+ * Show conversion results
+ */
 function showResults() {
     if (state.convertedFiles.length === 0) {
-        alert('No files were converted successfully.');
+        showError('No files were converted. Please check the file formats.');
         return;
     }
 
     elements.results.hidden = false;
-    elements.resultList.innerHTML = state.convertedFiles.map((file, index) => `
-        <div class="result-item">
-            <div class="result-info">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 12l2 2 4-4"/>
-                    <circle cx="12" cy="12" r="10"/>
-                </svg>
-                <span class="result-name">${file.name}</span>
-                <span class="result-size">${formatFileSize(file.size)}</span>
+
+    const totalSaved = state.convertedFiles.reduce((acc, f) => {
+        return acc + Math.max(0, f.originalSize - f.size);
+    }, 0);
+
+    elements.resultList.innerHTML = state.convertedFiles.map((file, index) => {
+        const name = escapeHtml(file.name);
+        const size = formatFileSize(file.size);
+        const savings = file.originalSize > file.size
+            ? `(${Math.round((1 - file.size / file.originalSize) * 100)}% smaller)`
+            : '';
+
+        return `
+            <div class="result-item">
+                <div class="result-info">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 12l2 2 4-4"/>
+                        <circle cx="12" cy="12" r="10"/>
+                    </svg>
+                    <span class="result-name" title="${name}">${name}</span>
+                    <span class="result-size">${size} ${savings}</span>
+                </div>
+                <button class="result-download" data-index="${index}">Download</button>
             </div>
-            <button class="result-download" data-index="${index}">Download</button>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 
     // Add download handlers
     elements.resultList.querySelectorAll('.result-download').forEach(btn => {
         btn.addEventListener('click', () => {
-            const index = parseInt(btn.dataset.index);
+            const index = parseInt(btn.dataset.index, 10);
             downloadFile(state.convertedFiles[index]);
         });
     });
 }
 
+/**
+ * Download a single file
+ */
 function downloadFile(file) {
     const url = URL.createObjectURL(file.blob);
     const a = document.createElement('a');
@@ -477,13 +714,23 @@ function downloadFile(file) {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+
+    // Revoke after a short delay
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/**
+ * Download all files
+ */
 function downloadAll() {
-    state.convertedFiles.forEach(file => downloadFile(file));
+    state.convertedFiles.forEach((file, index) => {
+        setTimeout(() => downloadFile(file), index * 200);
+    });
 }
 
+/**
+ * Clear all files
+ */
 function clearFiles() {
     state.files = [];
     state.convertedFiles = [];
@@ -495,15 +742,26 @@ function clearFiles() {
 // File Handling
 // ========================================
 
-function handleFiles(files) {
-    const validFiles = Array.from(files).filter(file => {
+/**
+ * Handle dropped/selected files
+ */
+function handleFiles(fileList) {
+    const files = Array.from(fileList);
+
+    const validFiles = files.filter(file => {
         const type = getFileType(file);
         return type !== 'unknown';
     });
 
+    const invalidCount = files.length - validFiles.length;
+
     if (validFiles.length === 0) {
-        alert('No valid files selected. Please select images, audio, or video files.');
+        showError('No valid files selected.\n\nSupported formats:\n• Images (PNG, JPG, WebP, GIF, etc.)\n• Audio (MP3, WAV, OGG, etc.)\n• Video (MP4, WebM, MOV, etc.)');
         return;
+    }
+
+    if (invalidCount > 0) {
+        console.warn(`${invalidCount} unsupported file(s) skipped`);
     }
 
     state.files = [...state.files, ...validFiles];
@@ -522,25 +780,33 @@ function initEventListeners() {
 
     // File input change
     elements.fileInput.addEventListener('change', (e) => {
-        handleFiles(e.target.files);
-        e.target.value = ''; // Reset
+        if (e.target.files.length > 0) {
+            handleFiles(e.target.files);
+        }
+        e.target.value = '';
     });
 
     // Drag & Drop
     elements.dropzone.addEventListener('dragover', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         elements.dropzone.classList.add('dragover');
     });
 
     elements.dropzone.addEventListener('dragleave', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         elements.dropzone.classList.remove('dragover');
     });
 
     elements.dropzone.addEventListener('drop', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         elements.dropzone.classList.remove('dragover');
-        handleFiles(e.dataTransfer.files);
+
+        if (e.dataTransfer.files.length > 0) {
+            handleFiles(e.dataTransfer.files);
+        }
     });
 
     // Quality slider
@@ -556,22 +822,30 @@ function initEventListeners() {
     elements.clearBtn.addEventListener('click', clearFiles);
     elements.downloadAllBtn.addEventListener('click', downloadAll);
 
-    // Prevent drag on whole page
+    // Prevent default drag behavior on document
     document.addEventListener('dragover', (e) => e.preventDefault());
     document.addEventListener('drop', (e) => e.preventDefault());
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Ctrl/Cmd + V to paste files (if supported)
+        if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+            // Paste handling would go here
+        }
+    });
 }
 
 // ========================================
-// Service Worker Registration
+// Service Worker
 // ========================================
 
 async function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         try {
-            await navigator.serviceWorker.register('sw.js');
-            console.log('Service Worker registered');
+            const registration = await navigator.serviceWorker.register('sw.js');
+            console.log('Service Worker registered:', registration.scope);
         } catch (error) {
-            console.log('Service Worker registration failed:', error);
+            console.warn('Service Worker registration failed:', error);
         }
     }
 }
@@ -581,10 +855,21 @@ async function registerServiceWorker() {
 // ========================================
 
 function init() {
+    // Check for required features
+    if (!window.Promise || !window.fetch) {
+        showError('Your browser is not supported. Please use a modern browser.');
+        return;
+    }
+
     initEventListeners();
     registerServiceWorker();
-    console.log('File Converter PWA initialized');
+
+    console.log('File Converter PWA v2.0.0 initialized');
 }
 
-// Start the app
-init();
+// Start app when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
