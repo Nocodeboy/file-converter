@@ -855,6 +855,9 @@ async function registerServiceWorker() {
 // ========================================
 
 function init() {
+    // Ensure loading overlay is hidden on startup
+    hideLoading();
+
     // Check for required features
     if (!window.Promise || !window.fetch) {
         showError('Your browser is not supported. Please use a modern browser.');
@@ -864,7 +867,7 @@ function init() {
     initEventListeners();
     registerServiceWorker();
 
-    console.log('File Converter PWA v2.0.0 initialized');
+    console.log('File Converter PWA v2.0.1 initialized');
 }
 
 // Start app when DOM is ready
