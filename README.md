@@ -26,11 +26,15 @@
 
 ---
 
-## 🌐 Web App (NEW!)
+## 🌐 Web App
 
-**Try the browser-based version!** No installation required, 100% private - files never leave your device.
+**No installation required. 100% private - files never leave your device.**
 
-**[Open Web App](app/)** | Powered by WebAssembly
+### **[Launch Web App](https://nocodeboy.github.io/file-converter/app/)**
+
+Convert images, audio, and video directly in your browser using WebAssembly.
+
+[![Try Web App](https://img.shields.io/badge/Try%20Web%20App-Launch-06b6d4?style=for-the-badge)](https://nocodeboy.github.io/file-converter/app/)
 
 ---
 
