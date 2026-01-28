@@ -3,7 +3,7 @@
  * Enables offline functionality and caching
  */
 
-const CACHE_NAME = 'file-converter-v5';
+const CACHE_NAME = 'file-converter-v6';
 
 // Get the base path dynamically (works with GitHub Pages subdirectories)
 const BASE_PATH = self.registration.scope;
