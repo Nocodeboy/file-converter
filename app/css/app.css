@@ -32,6 +32,11 @@
     box-sizing: border-box;
 }
 
+/* Ensure hidden attribute always works */
+[hidden] {
+    display: none !important;
+}
+
 html, body {
     height: 100%;
 }
