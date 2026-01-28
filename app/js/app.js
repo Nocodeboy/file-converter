@@ -722,11 +722,94 @@ function downloadFile(file) {
 }
 
 /**
- * Download all files
+ * Download all files as ZIP
  */
-function downloadAll() {
-    state.convertedFiles.forEach((file, index) => {
-        setTimeout(() => downloadFile(file), index * 200);
+async function downloadAll() {
+    if (state.convertedFiles.length === 0) return;
+
+    // If only one file, download directly
+    if (state.convertedFiles.length === 1) {
+        downloadFile(state.convertedFiles[0]);
+        return;
+    }
+
+    try {
+        // Show loading
+        showLoading('Creating ZIP file...');
+
+        // Dynamically import JSZip
+        const JSZip = (await import('https://unpkg.com/jszip@3.10.1/dist/jszip.min.js')).default
+            || window.JSZip;
+
+        // If JSZip didn't load properly, try loading it via script
+        if (!JSZip) {
+            await loadJSZipFallback();
+        }
+
+        const zip = new (JSZip || window.JSZip)();
+
+        // Add all files to ZIP
+        state.convertedFiles.forEach((file, index) => {
+            // Handle duplicate names by adding index
+            let filename = file.name;
+            const existingNames = state.convertedFiles.slice(0, index).map(f => f.name);
+            if (existingNames.includes(filename)) {
+                const ext = filename.split('.').pop();
+                const base = filename.slice(0, -(ext.length + 1));
+                filename = `${base}_${index}.${ext}`;
+            }
+            zip.file(filename, file.blob);
+        });
+
+        updateLoading('Compressing files...');
+
+        // Generate ZIP
+        const zipBlob = await zip.generateAsync({
+            type: 'blob',
+            compression: 'DEFLATE',
+            compressionOptions: { level: 6 }
+        }, (metadata) => {
+            updateLoading(`Compressing... ${Math.round(metadata.percent)}%`);
+        });
+
+        hideLoading();
+
+        // Download ZIP
+        const url = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `converted-files-${Date.now()}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    } catch (error) {
+        console.error('ZIP creation failed:', error);
+        hideLoading();
+
+        // Fallback: download files individually
+        console.log('Falling back to individual downloads');
+        state.convertedFiles.forEach((file, index) => {
+            setTimeout(() => downloadFile(file), index * 200);
+        });
+    }
+}
+
+/**
+ * Fallback loader for JSZip
+ */
+function loadJSZipFallback() {
+    return new Promise((resolve, reject) => {
+        if (window.JSZip) {
+            resolve();
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
     });
 }
 
@@ -869,7 +952,7 @@ function init() {
     initEventListeners();
     registerServiceWorker();
 
-    console.log('File Converter PWA v2.0.1 initialized');
+    console.log('File Converter PWA v2.1.0 initialized');
 }
 
 // Start app when DOM is ready
