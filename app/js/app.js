@@ -952,7 +952,7 @@ function init() {
     initEventListeners();
     registerServiceWorker();
 
-    console.log('File Converter PWA v2.1.0 initialized');
+    console.log('File Converter PWA v2.2.0 initialized');
 }
 
 // Start app when DOM is ready

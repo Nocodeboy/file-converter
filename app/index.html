@@ -6,7 +6,7 @@
     <script src="coi-serviceworker.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Convert files privately in your browser. No uploads, no servers - powered by WebAssembly.">
-    <meta name="theme-color" content="#0a0a0f">
+    <meta name="theme-color" content="#09090b">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>File Converter | Private Browser-Based Conversion</title>
@@ -22,23 +22,17 @@
         <!-- Header -->
         <header class="header">
             <a href="../index.html" class="logo">
-                <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="2" y="2" width="36" height="36" rx="8" stroke="url(#logoGrad)" stroke-width="2.5"/>
-                    <path d="M12 14h16M12 20h12M12 26h8" stroke="url(#logoGrad)" stroke-width="2.5" stroke-linecap="round"/>
-                    <circle cx="28" cy="26" r="6" fill="url(#logoGrad)"/>
-                    <path d="M26 26l2 2 3-4" stroke="#0a0a0f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <defs>
-                        <linearGradient id="logoGrad" x1="0" y1="0" x2="40" y2="40">
-                            <stop stop-color="#00d4ff"/>
-                            <stop offset="1" stop-color="#ff00aa"/>
-                        </linearGradient>
-                    </defs>
+                <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="1" y="1" width="26" height="26" rx="6" stroke="#06b6d4" stroke-width="2"/>
+                    <path d="M8 10h12M8 14h9M8 18h6" stroke="#06b6d4" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="20" cy="18" r="4" fill="#06b6d4"/>
+                    <path d="M18.5 18l1 1 2-2.5" stroke="#09090b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 <span>File Converter</span>
             </a>
             <div class="header-badge">
                 <span class="privacy-dot"></span>
-                100% Private - Files never leave your browser
+                100% Private
             </div>
         </header>
 
@@ -48,15 +42,10 @@
             <div class="dropzone" id="dropzone">
                 <div class="dropzone-content">
                     <div class="dropzone-icon">
-                        <svg viewBox="0 0 64 64" fill="none">
-                            <path d="M32 8v32M20 28l12 12 12-12" stroke="url(#uploadGrad)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M8 44v8a4 4 0 004 4h40a4 4 0 004-4v-8" stroke="url(#uploadGrad)" stroke-width="4" stroke-linecap="round"/>
-                            <defs>
-                                <linearGradient id="uploadGrad" x1="8" y1="8" x2="56" y2="56">
-                                    <stop stop-color="#00d4ff"/>
-                                    <stop offset="1" stop-color="#ff00aa"/>
-                                </linearGradient>
-                            </defs>
+                        <svg viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M28 8v28"/>
+                            <path d="M18 26l10 10 10-10"/>
+                            <path d="M8 40v6a2 2 0 002 2h36a2 2 0 002-2v-6"/>
                         </svg>
                     </div>
                     <h2>Drop files here</h2>
@@ -78,7 +67,7 @@
                 <!-- Conversion Options -->
                 <div class="options">
                     <div class="option-group">
-                        <label for="outputFormat">Convert to:</label>
+                        <label for="outputFormat">Format</label>
                         <select id="outputFormat" class="select">
                             <optgroup label="Images">
                                 <option value="png">PNG</option>
@@ -94,13 +83,13 @@
                             <optgroup label="Video">
                                 <option value="mp4">MP4</option>
                                 <option value="webm">WebM</option>
-                                <option value="gif-video">GIF (from video)</option>
+                                <option value="gif-video">GIF (animated)</option>
                             </optgroup>
                         </select>
                     </div>
 
                     <div class="option-group" id="qualityGroup">
-                        <label for="quality">Quality:</label>
+                        <label for="quality">Quality</label>
                         <div class="quality-slider">
                             <input type="range" id="quality" min="10" max="100" value="85">
                             <span id="qualityValue">85%</span>
@@ -126,9 +115,9 @@
                     </button>
                     <button class="btn btn-primary" id="convertBtn">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                            <path d="M12 5v14M5 12h14"/>
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
                         </svg>
-                        Convert Files
+                        Convert
                     </button>
                 </div>
 
@@ -151,7 +140,7 @@
             <p>Powered by WebAssembly. <a href="https://github.com/nocodeboy/file-converter" target="_blank">Open Source</a></p>
         </footer>
 
-        <!-- Loading Overlay (hidden by default, shown only during FFmpeg operations) -->
+        <!-- Loading Overlay -->
         <div class="loading-overlay" id="loadingOverlay" hidden style="display:none">
             <div class="loading-spinner"></div>
             <p id="loadingText">Loading...</p>
