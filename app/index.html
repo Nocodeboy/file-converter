@@ -151,10 +151,10 @@
             <p>Powered by WebAssembly. <a href="https://github.com/nocodeboy/file-converter" target="_blank">Open Source</a></p>
         </footer>
 
-        <!-- Loading Overlay -->
-        <div class="loading-overlay" id="loadingOverlay" hidden>
+        <!-- Loading Overlay (hidden by default, shown only during FFmpeg operations) -->
+        <div class="loading-overlay" id="loadingOverlay" hidden style="display:none">
             <div class="loading-spinner"></div>
-            <p id="loadingText">Loading FFmpeg...</p>
+            <p id="loadingText">Loading...</p>
         </div>
     </div>
 

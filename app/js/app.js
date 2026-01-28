@@ -555,6 +555,7 @@ function updateProgress(percent, text) {
 
 function showLoading(text) {
     elements.loadingOverlay.hidden = false;
+    elements.loadingOverlay.style.display = '';
     elements.loadingText.textContent = text;
 }
 
@@ -564,6 +565,7 @@ function updateLoading(text) {
 
 function hideLoading() {
     elements.loadingOverlay.hidden = true;
+    elements.loadingOverlay.style.display = 'none';
 }
 
 /**
