@@ -1,0 +1,13 @@
+# Cloudflare Pages Headers
+# These headers enable SharedArrayBuffer for FFmpeg.wasm
+
+/app/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: credentialless
+  Cross-Origin-Resource-Policy: cross-origin
+
+# Also apply to the app index
+/app/
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: credentialless
+  Cross-Origin-Resource-Policy: cross-origin

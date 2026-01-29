@@ -2,149 +2,75 @@
 /*
  * Cross-Origin Isolation Service Worker
  *
- * This service worker enables SharedArrayBuffer support on hosts that don't
- * allow custom headers (like GitHub Pages) by intercepting responses and
- * adding the required COOP/COEP headers.
- *
- * Required for FFmpeg.wasm to work properly.
+ * - On Cloudflare Pages: Headers set via _headers file, SW not needed
+ * - On GitHub Pages: SW injects COOP/COEP headers
  */
-
-let coepCredentialless = true;
 
 if (typeof window === 'undefined') {
     // Service Worker context
-    self.addEventListener("install", () => {
-        self.skipWaiting();
-    });
+    self.addEventListener("install", () => self.skipWaiting());
+    self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
 
-    self.addEventListener("activate", (event) => {
-        event.waitUntil(self.clients.claim());
-    });
-
-    self.addEventListener("message", (event) => {
-        if (event.data && event.data.type === "deregister") {
-            self.registration.unregister().then(() => {
-                return self.clients.matchAll();
-            }).then((clients) => {
-                clients.forEach((client) => client.navigate(client.url));
-            });
-        }
-    });
-
-    self.addEventListener("fetch", (event) => {
-        const request = event.request;
-
-        // Skip non-GET requests
-        if (request.method !== "GET") {
+    self.addEventListener("fetch", function (e) {
+        if (e.request.cache === "only-if-cached" && e.request.mode !== "same-origin") {
             return;
         }
 
-        // Skip chrome-extension and other non-http(s) requests
-        if (!request.url.startsWith("http")) {
-            return;
-        }
+        e.respondWith(
+            fetch(e.request)
+                .then((res) => {
+                    if (res.status === 0) return res;
 
-        // Handle cache mode
-        if (request.cache === "only-if-cached" && request.mode !== "same-origin") {
-            return;
-        }
-
-        event.respondWith(
-            fetch(request)
-                .then((response) => {
-                    // Don't modify opaque responses
-                    if (response.status === 0) {
-                        return response;
-                    }
-
-                    const newHeaders = new Headers(response.headers);
-
-                    // Add COEP header
-                    newHeaders.set(
-                        "Cross-Origin-Embedder-Policy",
-                        coepCredentialless ? "credentialless" : "require-corp"
-                    );
-
-                    // Add COOP header
+                    const newHeaders = new Headers(res.headers);
+                    newHeaders.set("Cross-Origin-Embedder-Policy", "credentialless");
                     newHeaders.set("Cross-Origin-Opener-Policy", "same-origin");
 
-                    return new Response(response.body, {
-                        status: response.status,
-                        statusText: response.statusText,
+                    return new Response(res.body, {
+                        status: res.status,
+                        statusText: res.statusText,
                         headers: newHeaders,
                     });
                 })
-                .catch((error) => {
-                    console.error("[COI-SW] Fetch error:", error);
-                    throw error;
+                .catch((err) => {
+                    console.error("[COI-SW] Fetch error:", err);
+                    throw err;
                 })
         );
     });
 
 } else {
-    // Window context - register the service worker
-    (() => {
-        // Check if already isolated
+    // Window context
+    (async function () {
+        // Already isolated? Great, nothing to do (Cloudflare Pages with native headers)
         if (window.crossOriginIsolated) {
-            console.log("[COI-SW] Already cross-origin isolated");
+            console.log("[COI] Cross-origin isolated via native headers");
             return;
         }
 
-        // Check if we already tried and reloaded
-        const reloaded = window.sessionStorage.getItem("coi-sw-reloaded");
-        if (reloaded) {
-            window.sessionStorage.removeItem("coi-sw-reloaded");
-            console.log("[COI-SW] Page was reloaded, isolation may not be possible");
+        // No service worker support
+        if (!navigator.serviceWorker) {
+            console.warn("[COI] Service Workers not supported");
             return;
         }
 
-        // Only works in secure contexts
-        if (!window.isSecureContext) {
-            console.warn("[COI-SW] Not a secure context, cannot enable isolation");
-            return;
-        }
+        try {
+            const registration = await navigator.serviceWorker.register(
+                window.document.currentScript.src
+            );
 
-        // Check for service worker support
-        if (!("serviceWorker" in navigator)) {
-            console.warn("[COI-SW] Service Workers not supported");
-            return;
-        }
+            console.log("[COI] Service Worker registered:", registration.scope);
 
-        // Get the script URL for registration
-        const currentScript = document.currentScript;
-        if (!currentScript) {
-            console.warn("[COI-SW] Cannot determine script URL");
-            return;
-        }
-
-        const scriptURL = currentScript.src;
-
-        // Register the service worker
-        navigator.serviceWorker
-            .register(scriptURL)
-            .then((registration) => {
-                console.log("[COI-SW] Service Worker registered");
-
-                // Handle new worker installation
-                if (registration.installing) {
-                    const worker = registration.installing;
-
-                    worker.addEventListener("statechange", () => {
-                        if (worker.state === "activated") {
-                            console.log("[COI-SW] Service Worker activated, reloading...");
-                            window.sessionStorage.setItem("coi-sw-reloaded", "true");
-                            window.location.reload();
-                        }
-                    });
-                } else if (registration.active && !navigator.serviceWorker.controller) {
-                    // Service worker is active but not controlling the page
-                    console.log("[COI-SW] Taking control, reloading...");
-                    window.sessionStorage.setItem("coi-sw-reloaded", "true");
-                    window.location.reload();
-                }
-            })
-            .catch((error) => {
-                console.error("[COI-SW] Registration failed:", error);
+            registration.addEventListener("updatefound", () => {
+                console.log("[COI] Reloading to enable COOP/COEP...");
+                window.location.reload();
             });
+
+            if (registration.active && !navigator.serviceWorker.controller) {
+                console.log("[COI] Reloading to enable COOP/COEP...");
+                window.location.reload();
+            }
+        } catch (e) {
+            console.error("[COI] Registration failed:", e);
+        }
     })();
 }

@@ -165,15 +165,49 @@ async function trackEvent(event, data = {}) {
 trackEvent('conversion_complete', { format: 'mp4', fileCount: 3 });
 ```
 
-## Quick Migration Checklist
+## Cloudflare Pages Deployment Guide
+
+### Step 1: Create Cloudflare Account
+1. Go to https://dash.cloudflare.com/sign-up
+2. Create a free account
+
+### Step 2: Connect GitHub Repository
+1. Go to **Workers & Pages** → **Create application** → **Pages**
+2. Click **Connect to Git**
+3. Select your GitHub repository: `nocodeboy/file-converter`
+4. Configure build settings:
+   - **Build command:** (leave empty - static site)
+   - **Build output directory:** `/` (root)
+5. Click **Save and Deploy**
+
+### Step 3: Verify Headers
+The `_headers` file in the repository root automatically configures:
+```
+/app/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: credentialless
+```
+
+### Step 4: Custom Domain (Optional)
+1. Go to your Pages project → **Custom domains**
+2. Add your domain (e.g., `converter.yourdomain.com`)
+3. Update DNS records as instructed
+
+### Step 5: Test FFmpeg
+1. Visit `https://your-project.pages.dev/app/`
+2. Upload an audio or video file
+3. FFmpeg should load and convert successfully
+
+### Migration Checklist
 
 - [ ] Create Cloudflare account
 - [ ] Connect GitHub repository
-- [ ] Add `_headers` file for COOP/COEP
-- [ ] Remove `coi-serviceworker.js` (not needed with native headers)
-- [ ] Update DNS to Cloudflare
-- [ ] Test all functionality
-- [ ] Set up basic monitoring
+- [ ] Deploy to Cloudflare Pages
+- [ ] Verify `_headers` file is working (check Response Headers in DevTools)
+- [ ] Test image conversion
+- [ ] Test audio/video conversion (should work now!)
+- [ ] Set up custom domain (optional)
+- [ ] Update README with new URL
 
 ## Conclusion
 
