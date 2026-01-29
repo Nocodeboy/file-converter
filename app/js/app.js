@@ -198,24 +198,16 @@ async function loadFFmpeg() {
     if (state.ffmpegFailed) return false;
     if (state.ffmpegLoading) return false;
 
+    // Quick check first - fail fast if SharedArrayBuffer is not available
+    if (!window.crossOriginIsolated && !checkSharedArrayBuffer()) {
+        state.ffmpegFailed = true;
+        throw new Error('SharedArrayBuffer is not available');
+    }
+
     state.ffmpegLoading = true;
 
     try {
-        showLoading('Checking browser compatibility...');
-
-        const isIsolated = await checkCrossOriginIsolated();
-
-        if (!isIsolated) {
-            // Try waiting longer for the service worker
-            updateLoading('Enabling secure context...');
-            await sleep(1000);
-
-            if (!checkSharedArrayBuffer()) {
-                throw new Error('SharedArrayBuffer is not available. Please reload the page.');
-            }
-        }
-
-        updateLoading('Loading FFmpeg library...');
+        showLoading('Loading FFmpeg (this may take a moment)...');
 
         // Dynamic import with timeout
         const controller = new AbortController();
@@ -287,16 +279,15 @@ async function loadFFmpeg() {
 function getFFmpegErrorMessage(error) {
     const msg = error.message || String(error);
 
-    if (msg.includes('SharedArrayBuffer')) {
-        return 'Your browser cannot run FFmpeg.\n\n' +
-               'This usually happens when:\n' +
-               '• The page was not loaded securely\n' +
-               '• Your browser blocks this feature\n\n' +
-               'Try:\n' +
-               '1. Reload the page\n' +
-               '2. Use Chrome, Edge, or Firefox\n' +
-               '3. Make sure you\'re using HTTPS\n\n' +
-               'Image conversion still works!';
+    if (msg.includes('SharedArrayBuffer') || !window.crossOriginIsolated) {
+        return 'Audio/Video conversion is not available.\n\n' +
+               'This is a browser security limitation on GitHub Pages.\n\n' +
+               'What works:\n' +
+               '✓ Image conversion (PNG, JPEG, WebP, GIF)\n\n' +
+               'What doesn\'t work:\n' +
+               '✗ Audio conversion (MP3, WAV, OGG)\n' +
+               '✗ Video conversion (MP4, WebM)\n\n' +
+               'To convert audio/video, download the CLI version from GitHub.';
     }
 
     if (msg.includes('timeout') || msg.includes('Timeout')) {
