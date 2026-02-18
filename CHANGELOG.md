@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Cloudflare Workers runtime support via `worker.js` + `wrangler.toml` for full `/app` COOP/COEP headers and a `/healthz` endpoint.
+
+### Changed
+- Updated SharedArrayBuffer guidance in the web app to point to Cloudflare Pages/Workers deployment instead of GitHub Pages-only wording.
+- Documented Cloudflare Workers deployment steps in `README.md` and `docs/SCALABILITY.md`.
+
 ## [2.0.1] - 2026-01-28
 
 ### Fixed

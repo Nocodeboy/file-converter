@@ -1,0 +1,8 @@
+name = "file-converter"
+main = "worker.js"
+compatibility_date = "2026-02-18"
+workers_dev = true
+
+[assets]
+directory = "."
+binding = "ASSETS"

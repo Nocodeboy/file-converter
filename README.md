@@ -34,6 +34,19 @@
 
 Convert images, audio, and video directly in your browser using WebAssembly.
 
+### Deploy en Cloudflare Workers (recomendado)
+
+El repositorio ya incluye configuración lista para Workers (`wrangler.toml` + `worker.js`) para que FFmpeg funcione con `SharedArrayBuffer` en `/app`.
+
+```bash
+npm install -g wrangler
+wrangler login
+wrangler deploy
+```
+
+Después del deploy, abre `https://<tu-worker>.workers.dev/app/` y prueba conversión de audio/video.
+
+
 [![Try Web App](https://img.shields.io/badge/Try%20Web%20App-Launch-06b6d4?style=for-the-badge)](https://nocodeboy.github.io/file-converter/app/)
 
 ---
