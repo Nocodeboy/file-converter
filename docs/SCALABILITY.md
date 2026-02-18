@@ -165,6 +165,26 @@ async function trackEvent(event, data = {}) {
 trackEvent('conversion_complete', { format: 'mp4', fileCount: 3 });
 ```
 
+## Cloudflare Workers Deployment Guide
+
+This repository also ships a Worker runtime (`worker.js`) plus `wrangler.toml` to serve static assets and inject the required isolation headers for FFmpeg on `/app/*`.
+
+### Deploy
+
+```bash
+wrangler login
+wrangler deploy
+```
+
+### Validate
+
+- Open `https://<worker>.workers.dev/app/`
+- Confirm response headers include:
+  - `Cross-Origin-Opener-Policy: same-origin`
+  - `Cross-Origin-Embedder-Policy: credentialless`
+- Convert at least one MP3 or MP4 file
+- Check health endpoint: `https://<worker>.workers.dev/healthz`
+
 ## Cloudflare Pages Deployment Guide
 
 ### Step 1: Create Cloudflare Account

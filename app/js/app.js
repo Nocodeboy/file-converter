@@ -281,13 +281,13 @@ function getFFmpegErrorMessage(error) {
 
     if (msg.includes('SharedArrayBuffer') || !window.crossOriginIsolated) {
         return 'Audio/Video conversion is not available.\n\n' +
-               'This is a browser security limitation on GitHub Pages.\n\n' +
+               'This origin is missing the required isolation headers (COOP/COEP).\n\n' +
                'What works:\n' +
                '✓ Image conversion (PNG, JPEG, WebP, GIF)\n\n' +
                'What doesn\'t work:\n' +
                '✗ Audio conversion (MP3, WAV, OGG)\n' +
                '✗ Video conversion (MP4, WebM)\n\n' +
-               'To convert audio/video, download the CLI version from GitHub.';
+               'Deploy/run the app from Cloudflare Pages or Workers and open /app/.';
     }
 
     if (msg.includes('timeout') || msg.includes('Timeout')) {
