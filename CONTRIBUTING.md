@@ -68,6 +68,16 @@ To add a new format:
 4. Test the conversion/compression
 5. Update README.md with new format
 
+### Changelog Notes (Important)
+
+To avoid recurring merge conflicts in `CHANGELOG.md`:
+
+- **Do not edit `CHANGELOG.md` directly in feature branches** unless explicitly requested.
+- Add your release notes as a fragment under `changelog.d/` (see `changelog.d/README.md`).
+- Maintainers will consolidate fragments into `CHANGELOG.md` during release preparation.
+
+`CHANGELOG.md` is configured with a union merge strategy in `.gitattributes`, but fragments are still the preferred workflow.
+
 ### Commit Messages
 
 Use clear, descriptive commit messages:

@@ -34,9 +34,39 @@
 
 Convert images, audio, and video directly in your browser using WebAssembly.
 
+### Deploy en Cloudflare Workers (recomendado)
+
+El repositorio ya incluye configuración lista para Workers (`wrangler.toml` + `worker.js`) para que FFmpeg funcione con `SharedArrayBuffer` en `/app`.
+
+```bash
+npm install -g wrangler
+wrangler login
+wrangler deploy
+```
+
+Después del deploy, abre `https://<tu-worker>.workers.dev/app/` y prueba conversión de audio/video.
+
+
 [![Try Web App](https://img.shields.io/badge/Try%20Web%20App-Launch-06b6d4?style=for-the-badge)](https://nocodeboy.github.io/file-converter/app/)
 
 ---
+
+## 🧩 Versions
+
+This project includes two execution modes:
+
+- **Web App (PWA)**: browser-based conversion at `/app` (ideal for quick use and sharing).
+- **Local Windows CLI**: offline/local processing using `CONVERT.bat` and PowerShell scripts.
+
+### Local executable (.exe) build (optional)
+
+If you need a single executable launcher for Windows, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build-exe.ps1
+```
+
+This generates `FileConverter.exe` (uses `ps2exe` under the hood).
 
 ## ✨ Features
 
