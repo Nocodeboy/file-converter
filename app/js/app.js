@@ -84,20 +84,6 @@ const FORMAT_LABELS = {
 };
 
 
-const JSZIP_MODULE_CDN = [
-    'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm',
-    'https://esm.sh/jszip@3.10.1'
-];
-
-const JSZIP_SCRIPT_CDN = [
-    'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
-    'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js'
-];
-
-const ZIP_BATCH_THRESHOLD = {
-    files: 20,
-    bytes: 150 * 1024 * 1024
-};
 
 // ========================================
 // Utilities
@@ -744,52 +730,13 @@ async function downloadAll() {
         showLoading('Creating ZIP file...');
         elements.downloadAllBtn.disabled = true;
 
-        const JSZip = await loadJSZip();
-        const zip = new JSZip();
-
-        const totalBytes = state.convertedFiles.reduce((acc, file) => acc + file.size, 0);
-        const useStore = state.convertedFiles.length >= ZIP_BATCH_THRESHOLD.files || totalBytes >= ZIP_BATCH_THRESHOLD.bytes;
-
-        const fileNameCounter = new Map();
-
-        state.convertedFiles.forEach((file) => {
-            const originalName = file.name;
-            const count = fileNameCounter.get(originalName) || 0;
-            fileNameCounter.set(originalName, count + 1);
-
-            let filename = originalName;
-            if (count > 0) {
-                const ext = getFileExtension(originalName);
-                const base = ext ? originalName.slice(0, -(ext.length + 1)) : originalName;
-                filename = ext ? `${base}_${count}.${ext}` : `${base}_${count}`;
-            }
-
-            zip.file(filename, file.blob);
-        });
-
-        updateLoading(useStore
-            ? 'Bundling files (optimized for large batches)...'
-            : 'Compressing files...');
-
-        const zipBlob = await zip.generateAsync({
-            type: 'blob',
-            compression: useStore ? 'STORE' : 'DEFLATE',
-            compressionOptions: useStore ? undefined : { level: 6 },
-            streamFiles: true
-        }, (metadata) => {
-            updateLoading(`${useStore ? 'Bundling' : 'Compressing'}... ${Math.round(metadata.percent)}%`);
+        const normalizedFiles = createUniqueFilenames(state.convertedFiles);
+        const zipBlob = await createZipBlob(normalizedFiles, (percent) => {
+            updateLoading(`Bundling files... ${percent}%`);
         });
 
         hideLoading();
-
-        const url = URL.createObjectURL(zipBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `converted-files-${Date.now()}.zip`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        triggerBlobDownload(zipBlob, `converted-files-${Date.now()}.zip`);
 
     } catch (error) {
         console.error('ZIP creation failed:', error);
@@ -797,7 +744,7 @@ async function downloadAll() {
 
         showError(
             'Could not create ZIP package\n\n' +
-            'Possible causes: network/CDN issue when loading JSZip or insufficient browser memory.\n' +
+            `Reason: ${error.message || 'unknown error'}\n\n` +
             'Trying individual downloads as fallback.'
         );
 
@@ -809,62 +756,179 @@ async function downloadAll() {
     }
 }
 
-/**
- * Load JSZip from module CDN(s) with script fallback
- */
-async function loadJSZip() {
-    if (window.JSZip) return window.JSZip;
-
-    for (const source of JSZIP_MODULE_CDN) {
-        try {
-            const module = await import(source);
-            const loaded = module?.default || module?.JSZip;
-            if (loaded) return loaded;
-        } catch (error) {
-            console.warn(`Failed to load JSZip module from ${source}`, error);
-        }
-    }
-
-    await loadJSZipFallback();
-
-    if (!window.JSZip) {
-        throw new Error('Unable to load JSZip from all configured sources');
-    }
-
-    return window.JSZip;
+function triggerBlobDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/**
- * Fallback loader for JSZip
- */
-function loadJSZipFallback() {
-    return new Promise((resolve, reject) => {
-        if (window.JSZip) {
-            resolve();
-            return;
+function createUniqueFilenames(files) {
+    const fileNameCounter = new Map();
+
+    return files.map((file) => {
+        const originalName = file.name;
+        const count = fileNameCounter.get(originalName) || 0;
+        fileNameCounter.set(originalName, count + 1);
+
+        if (count === 0) return file;
+
+        const ext = getFileExtension(originalName);
+        const base = ext ? originalName.slice(0, -(ext.length + 1)) : originalName;
+        const uniqueName = ext ? `${base}_${count}.${ext}` : `${base}_${count}`;
+
+        return { ...file, name: uniqueName };
+    });
+}
+
+function writeUInt16LE(view, offset, value) {
+    view.setUint16(offset, value & 0xffff, true);
+}
+
+function writeUInt32LE(view, offset, value) {
+    view.setUint32(offset, value >>> 0, true);
+}
+
+function toDosDateTime(date = new Date()) {
+    const year = Math.max(1980, date.getFullYear());
+    const dosTime = ((date.getHours() & 0x1f) << 11)
+        | ((date.getMinutes() & 0x3f) << 5)
+        | ((Math.floor(date.getSeconds() / 2)) & 0x1f);
+    const dosDate = (((year - 1980) & 0x7f) << 9)
+        | (((date.getMonth() + 1) & 0x0f) << 5)
+        | (date.getDate() & 0x1f);
+    return { dosTime, dosDate };
+}
+
+const CRC_TABLE = (() => {
+    const table = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+        let c = i;
+        for (let j = 0; j < 8; j++) {
+            c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        }
+        table[i] = c >>> 0;
+    }
+    return table;
+})();
+
+async function crc32FromBlob(blob) {
+    let crc = 0 ^ (-1);
+    const reader = blob.stream().getReader();
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        for (let i = 0; i < value.length; i++) {
+            crc = (crc >>> 8) ^ CRC_TABLE[(crc ^ value[i]) & 0xff];
+        }
+    }
+
+    return (crc ^ (-1)) >>> 0;
+}
+
+async function createZipBlob(files, onProgress) {
+    const encoder = new TextEncoder();
+    const chunks = [];
+    const centralRecords = [];
+    let offset = 0;
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const nameBytes = encoder.encode(file.name);
+
+        if (file.size > 0xffffffff) {
+            throw new Error(`File too large for standard ZIP: ${file.name}`);
         }
 
-        let index = 0;
-        const tryNext = () => {
-            if (index >= JSZIP_SCRIPT_CDN.length) {
-                reject(new Error('All JSZip fallback CDNs failed'));
-                return;
-            }
+        const crc = await crc32FromBlob(file.blob);
+        const { dosTime, dosDate } = toDosDateTime();
 
-            const script = document.createElement('script');
-            script.src = JSZIP_SCRIPT_CDN[index++];
-            script.async = true;
-            script.crossOrigin = 'anonymous';
-            script.onload = () => resolve();
-            script.onerror = () => {
-                script.remove();
-                tryNext();
-            };
-            document.head.appendChild(script);
-        };
+        const localHeader = new Uint8Array(30);
+        const lv = new DataView(localHeader.buffer);
+        writeUInt32LE(lv, 0, 0x04034b50);
+        writeUInt16LE(lv, 4, 20);
+        writeUInt16LE(lv, 6, 0);
+        writeUInt16LE(lv, 8, 0);
+        writeUInt16LE(lv, 10, dosTime);
+        writeUInt16LE(lv, 12, dosDate);
+        writeUInt32LE(lv, 14, crc);
+        writeUInt32LE(lv, 18, file.size);
+        writeUInt32LE(lv, 22, file.size);
+        writeUInt16LE(lv, 26, nameBytes.length);
+        writeUInt16LE(lv, 28, 0);
 
-        tryNext();
-    });
+        chunks.push(localHeader, nameBytes, file.blob);
+
+        centralRecords.push({
+            nameBytes,
+            crc,
+            size: file.size,
+            dosTime,
+            dosDate,
+            offset
+        });
+
+        offset += localHeader.length + nameBytes.length + file.size;
+
+        if (onProgress) {
+            onProgress(Math.round(((i + 1) / (files.length + 1)) * 100));
+        }
+    }
+
+    const centralStart = offset;
+
+    for (const record of centralRecords) {
+        const centralHeader = new Uint8Array(46);
+        const cv = new DataView(centralHeader.buffer);
+        writeUInt32LE(cv, 0, 0x02014b50);
+        writeUInt16LE(cv, 4, 20);
+        writeUInt16LE(cv, 6, 20);
+        writeUInt16LE(cv, 8, 0);
+        writeUInt16LE(cv, 10, 0);
+        writeUInt16LE(cv, 12, record.dosTime);
+        writeUInt16LE(cv, 14, record.dosDate);
+        writeUInt32LE(cv, 16, record.crc);
+        writeUInt32LE(cv, 20, record.size);
+        writeUInt32LE(cv, 24, record.size);
+        writeUInt16LE(cv, 28, record.nameBytes.length);
+        writeUInt16LE(cv, 30, 0);
+        writeUInt16LE(cv, 32, 0);
+        writeUInt16LE(cv, 34, 0);
+        writeUInt16LE(cv, 36, 0);
+        writeUInt32LE(cv, 38, 0);
+        writeUInt32LE(cv, 42, record.offset);
+
+        chunks.push(centralHeader, record.nameBytes);
+        offset += centralHeader.length + record.nameBytes.length;
+    }
+
+    const centralSize = offset - centralStart;
+
+    if (centralRecords.length > 0xffff || centralSize > 0xffffffff || centralStart > 0xffffffff) {
+        throw new Error('ZIP exceeds standard limits (ZIP64 not supported yet)');
+    }
+
+    const endRecord = new Uint8Array(22);
+    const ev = new DataView(endRecord.buffer);
+    writeUInt32LE(ev, 0, 0x06054b50);
+    writeUInt16LE(ev, 4, 0);
+    writeUInt16LE(ev, 6, 0);
+    writeUInt16LE(ev, 8, centralRecords.length);
+    writeUInt16LE(ev, 10, centralRecords.length);
+    writeUInt32LE(ev, 12, centralSize);
+    writeUInt32LE(ev, 16, centralStart);
+    writeUInt16LE(ev, 20, 0);
+
+    chunks.push(endRecord);
+
+    if (onProgress) onProgress(100);
+
+    return new Blob(chunks, { type: 'application/zip' });
 }
 
 /**

@@ -51,6 +51,23 @@ Después del deploy, abre `https://<tu-worker>.workers.dev/app/` y prueba conver
 
 ---
 
+## 🧩 Versions
+
+This project includes two execution modes:
+
+- **Web App (PWA)**: browser-based conversion at `/app` (ideal for quick use and sharing).
+- **Local Windows CLI**: offline/local processing using `CONVERT.bat` and PowerShell scripts.
+
+### Local executable (.exe) build (optional)
+
+If you need a single executable launcher for Windows, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build-exe.ps1
+```
+
+This generates `FileConverter.exe` (uses `ps2exe` under the hood).
+
 ## ✨ Features
 
 - **�️ Image Conversion & Compression** - Convert between PNG, JPG, WEBP, GIF, ICO, BMP, TIFF and more

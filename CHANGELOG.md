@@ -9,17 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Cloudflare Workers runtime support via `worker.js` + `wrangler.toml` for full `/app` COOP/COEP headers and a `/healthz` endpoint.
+- Added optional Windows `.exe` build script (`scripts/build-exe.ps1`) for local CLI launcher generation.
 
 ### Changed
 - Updated SharedArrayBuffer guidance in the web app to point to Cloudflare Pages/Workers deployment instead of GitHub Pages-only wording.
 - Documented Cloudflare Workers deployment steps in `README.md` and `docs/SCALABILITY.md`.
 
 ### Fixed
-- Improved bulk "Download All (ZIP)" reliability by hardening JSZip loading with multiple CDN fallbacks and better error handling.
+- Replaced fragile external JSZip dependency path with an in-app ZIP builder to avoid COEP/CDN blocking issues on Workers and reduce fallback to one-by-one downloads.
 
 ### Improved
-- Optimized ZIP generation for large batches by using lower-memory bundling mode (`STORE`) on big jobs and streaming zip creation.
-- Improved duplicate filename handling performance from repeated scans to a map-based counter.
+- Improved duplicate filename handling performance from repeated scans to a map-based counter before ZIP packaging.
+- Added clearer ZIP failure messages with explicit root-cause hints and controlled fallback behavior.
 
 
 ## [2.0.1] - 2026-01-28
