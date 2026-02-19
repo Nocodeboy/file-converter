@@ -1,0 +1,2 @@
+# Reduce recurring merge conflicts in append-only release notes.
+CHANGELOG.md merge=union

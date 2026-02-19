@@ -22,7 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved duplicate filename handling performance from repeated scans to a map-based counter before ZIP packaging.
 - Added clearer ZIP failure messages with explicit root-cause hints and controlled fallback behavior.
 
-
 ## [2.0.1] - 2026-01-28
 
 ### Fixed
