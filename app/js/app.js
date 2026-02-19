@@ -83,6 +83,22 @@ const FORMAT_LABELS = {
     'gif-video': 'GIF (animated)'
 };
 
+
+const JSZIP_MODULE_CDN = [
+    'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm',
+    'https://esm.sh/jszip@3.10.1'
+];
+
+const JSZIP_SCRIPT_CDN = [
+    'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+    'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js'
+];
+
+const ZIP_BATCH_THRESHOLD = {
+    files: 20,
+    bytes: 150 * 1024 * 1024
+};
+
 // ========================================
 // Utilities
 // ========================================
@@ -281,13 +297,13 @@ function getFFmpegErrorMessage(error) {
 
     if (msg.includes('SharedArrayBuffer') || !window.crossOriginIsolated) {
         return 'Audio/Video conversion is not available.\n\n' +
-               'This is a browser security limitation on GitHub Pages.\n\n' +
+               'This origin is missing the required isolation headers (COOP/COEP).\n\n' +
                'What works:\n' +
                '✓ Image conversion (PNG, JPEG, WebP, GIF)\n\n' +
                'What doesn\'t work:\n' +
                '✗ Audio conversion (MP3, WAV, OGG)\n' +
                '✗ Video conversion (MP4, WebM)\n\n' +
-               'To convert audio/video, download the CLI version from GitHub.';
+               'Deploy/run the app from Cloudflare Pages or Workers and open /app/.';
     }
 
     if (msg.includes('timeout') || msg.includes('Timeout')) {
@@ -725,47 +741,47 @@ async function downloadAll() {
     }
 
     try {
-        // Show loading
         showLoading('Creating ZIP file...');
+        elements.downloadAllBtn.disabled = true;
 
-        // Dynamically import JSZip
-        const JSZip = (await import('https://unpkg.com/jszip@3.10.1/dist/jszip.min.js')).default
-            || window.JSZip;
+        const JSZip = await loadJSZip();
+        const zip = new JSZip();
 
-        // If JSZip didn't load properly, try loading it via script
-        if (!JSZip) {
-            await loadJSZipFallback();
-        }
+        const totalBytes = state.convertedFiles.reduce((acc, file) => acc + file.size, 0);
+        const useStore = state.convertedFiles.length >= ZIP_BATCH_THRESHOLD.files || totalBytes >= ZIP_BATCH_THRESHOLD.bytes;
 
-        const zip = new (JSZip || window.JSZip)();
+        const fileNameCounter = new Map();
 
-        // Add all files to ZIP
-        state.convertedFiles.forEach((file, index) => {
-            // Handle duplicate names by adding index
-            let filename = file.name;
-            const existingNames = state.convertedFiles.slice(0, index).map(f => f.name);
-            if (existingNames.includes(filename)) {
-                const ext = filename.split('.').pop();
-                const base = filename.slice(0, -(ext.length + 1));
-                filename = `${base}_${index}.${ext}`;
+        state.convertedFiles.forEach((file) => {
+            const originalName = file.name;
+            const count = fileNameCounter.get(originalName) || 0;
+            fileNameCounter.set(originalName, count + 1);
+
+            let filename = originalName;
+            if (count > 0) {
+                const ext = getFileExtension(originalName);
+                const base = ext ? originalName.slice(0, -(ext.length + 1)) : originalName;
+                filename = ext ? `${base}_${count}.${ext}` : `${base}_${count}`;
             }
+
             zip.file(filename, file.blob);
         });
 
-        updateLoading('Compressing files...');
+        updateLoading(useStore
+            ? 'Bundling files (optimized for large batches)...'
+            : 'Compressing files...');
 
-        // Generate ZIP
         const zipBlob = await zip.generateAsync({
             type: 'blob',
-            compression: 'DEFLATE',
-            compressionOptions: { level: 6 }
+            compression: useStore ? 'STORE' : 'DEFLATE',
+            compressionOptions: useStore ? undefined : { level: 6 },
+            streamFiles: true
         }, (metadata) => {
-            updateLoading(`Compressing... ${Math.round(metadata.percent)}%`);
+            updateLoading(`${useStore ? 'Bundling' : 'Compressing'}... ${Math.round(metadata.percent)}%`);
         });
 
         hideLoading();
 
-        // Download ZIP
         const url = URL.createObjectURL(zipBlob);
         const a = document.createElement('a');
         a.href = url;
@@ -779,12 +795,43 @@ async function downloadAll() {
         console.error('ZIP creation failed:', error);
         hideLoading();
 
-        // Fallback: download files individually
-        console.log('Falling back to individual downloads');
+        showError(
+            'Could not create ZIP package\n\n' +
+            'Possible causes: network/CDN issue when loading JSZip or insufficient browser memory.\n' +
+            'Trying individual downloads as fallback.'
+        );
+
         state.convertedFiles.forEach((file, index) => {
             setTimeout(() => downloadFile(file), index * 200);
         });
+    } finally {
+        elements.downloadAllBtn.disabled = false;
     }
+}
+
+/**
+ * Load JSZip from module CDN(s) with script fallback
+ */
+async function loadJSZip() {
+    if (window.JSZip) return window.JSZip;
+
+    for (const source of JSZIP_MODULE_CDN) {
+        try {
+            const module = await import(source);
+            const loaded = module?.default || module?.JSZip;
+            if (loaded) return loaded;
+        } catch (error) {
+            console.warn(`Failed to load JSZip module from ${source}`, error);
+        }
+    }
+
+    await loadJSZipFallback();
+
+    if (!window.JSZip) {
+        throw new Error('Unable to load JSZip from all configured sources');
+    }
+
+    return window.JSZip;
 }
 
 /**
@@ -796,11 +843,27 @@ function loadJSZipFallback() {
             resolve();
             return;
         }
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js';
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
+
+        let index = 0;
+        const tryNext = () => {
+            if (index >= JSZIP_SCRIPT_CDN.length) {
+                reject(new Error('All JSZip fallback CDNs failed'));
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = JSZIP_SCRIPT_CDN[index++];
+            script.async = true;
+            script.crossOrigin = 'anonymous';
+            script.onload = () => resolve();
+            script.onerror = () => {
+                script.remove();
+                tryNext();
+            };
+            document.head.appendChild(script);
+        };
+
+        tryNext();
     });
 }
 
